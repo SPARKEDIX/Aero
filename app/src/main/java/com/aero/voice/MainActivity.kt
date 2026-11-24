@@ -805,7 +805,8 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     private val screenCaptureRunnable = object : Runnable {
         override fun run() {
             captureScreenFrame()
-            handler.postDelayed(this, 4000L)
+            // Live API allows up to 1 image frame per second. Keep streaming.
+            handler.postDelayed(this, 1000L)
         }
     }
 
@@ -839,7 +840,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             miniOrb.visibility = View.VISIBLE
             handler.post(miniOrbPump)
             captureScreenFrame()
-            handler.postDelayed(screenCaptureRunnable, 4000L)
+            handler.postDelayed(screenCaptureRunnable, 1000L)
             // App intentionally stays alive so mic + Gemini voice keep working;
             // the floating orb gives the same "outside the app" experience.
         } catch (t: Throwable) {
