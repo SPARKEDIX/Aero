@@ -94,6 +94,9 @@ class SearchEngine(
             .filter { it.length > 2 }
             .toSet()
 
+        // Queries that ask for *now* get a bonus for dated results.
+        val freshnessHint = FRESHNESS_HINT.containsMatchIn(query)
+
         val urlSeen = HashSet<String>()
         val titleSeen = HashSet<String>()
         val scored = ArrayList<Pair<WebResult, Double>>()
@@ -105,7 +108,7 @@ class SearchEngine(
             if (titleKey.isBlank() || !titleSeen.add(titleKey)) continue
 
             var score = when (r.source) {
-                "Open-Meteo", "CoinGecko" -> 1.70
+                "Open-Meteo", "CoinGecko", "Frankfurter" -> 1.70
                 "DuckDuckGo" -> 1.20
                 "Wikipedia" -> 1.15
                 "Google News", "Bing News" -> 1.05
@@ -113,10 +116,27 @@ class SearchEngine(
                 "GitHub" -> 0.95
                 "Hacker News" -> 0.90
                 "Reddit" -> 0.85
+                "YouTube" -> 0.75
+                "arXiv" -> 0.85
+                "Spaceflight News" -> 0.95
+                "Lemmy" -> 0.80
+                "Marginalia" -> 0.70
+                "Mwmbl" -> 0.70
                 else -> 0.80
             }
             val text = (r.title + " " + r.snippet).lowercase()
             score += tokens.count { text.contains(it) } * 0.10
+
+            // Freshness: dated results get a boost, huge boost if very recent.
+            val ageMs = r.publishedAt?.let(::parseAgeMs)
+            if (ageMs != null) {
+                score += 0.30
+                if (ageMs < 24 * 3600_000L) score += 0.45
+                else if (ageMs < 7L * 24 * 3600_000L) score += 0.20
+            } else if (freshnessHint) {
+                // No date → penalize slightly when the user explicitly wants news.
+                score -= 0.10
+            }
             scored.add(r to score)
         }
 
@@ -132,21 +152,51 @@ class SearchEngine(
         return out
     }
 
+    private fun parseAgeMs(date: String): Long? {
+        return try {
+            val trimmed = date.trim()
+            val fmt = when {
+                trimmed.endsWith("Z") -> java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+                trimmed.contains("GMT") -> java.text.SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", java.util.Locale.US)
+                trimmed.contains(",") -> java.text.SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", java.util.Locale.US)
+                else -> java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+            }
+            val time = fmt.parse(trimmed)?.time ?: return null
+            System.currentTimeMillis() - time
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     companion object {
         private const val SOURCE_TIMEOUT_MS = 7_000L
-        private const val MAX_RESULTS = 12
+        private const val MAX_RESULTS = 14
 
-        private fun defaultSources(): List<Source> = listOf(
-            DuckDuckGoSource(),
-            WikipediaSource(),
-            GoogleNewsSource(),
-            BingNewsSource(),
-            HackerNewsSource(),
-            RedditSource(),
-            StackOverflowSource(),
-            GitHubSource(),
-            WeatherSource(),
-            CryptoSource()
+        private val FRESHNESS_HINT = Regex(
+            "(?i)\\b(today|yesterday|tonight|latest|news|new|recent|update|breaking|" +
+                "happening|now|current|fresh|just|live)\\b"
         )
+
+        private fun defaultSources(): List<Source> {
+            return listOf(
+                DuckDuckGoSource(),
+                WikipediaSource(),
+                GoogleNewsSource(),
+                BingNewsSource(),
+                HackerNewsSource(),
+                RedditSource(),
+                StackOverflowSource(),
+                GitHubSource(),
+                WeatherSource(),
+                CryptoSource(),
+                MwmblSource(),
+                MarginaliaSource(),
+                YouTubeSource(),
+                ArxivSource(),
+                SpaceflightNewsSource(),
+                FrankfurterSource(),
+                LemmySource()
+            )
+        }
     }
 }

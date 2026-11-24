@@ -18,18 +18,22 @@ class RateLimitedException(val retryAfterMs: Long? = null) : Exception("HTTP rat
  * - Caps concurrent requests per source.
  * - On 429/403 it enters an exponential cooldown and fails fast (returns null)
  *   instead of blocking the whole search.
+ * - Repeated generic failures (blocked/parse errors) also trigger a cooldown,
+ *   so a flaky backend cannot eat our whole frame budget forever.
  */
 class RateLimiter(
     private val minIntervalMs: Long,
     maxConcurrent: Int = 1,
     private val baseCooldownMs: Long = 45_000L,
-    private val maxCooldownMs: Long = 10 * 60_000L
+    private val maxCooldownMs: Long = 10 * 60_000L,
+    private val genericFailsBeforeCooldown: Int = 3
 ) {
     private val gate = Mutex()
     private val permits = Semaphore(maxConcurrent)
     private var nextSlotAt = 0L
     private var cooldownUntil = 0L
     private var backoffMs = 0L
+    private var genericFails = 0
 
     suspend fun <T> run(block: suspend () -> T): T? = permits.withPermit {
         val ready = gate.withLock {
@@ -44,7 +48,10 @@ class RateLimiter(
 
         try {
             val result = block()
-            gate.withLock { backoffMs = 0L }
+            gate.withLock {
+                genericFails = 0
+                backoffMs = 0L
+            }
             result
         } catch (e: RateLimitedException) {
             gate.withLock {
@@ -53,6 +60,14 @@ class RateLimiter(
             }
             null
         } catch (_: Exception) {
+            gate.withLock {
+                genericFails++
+                if (genericFails >= genericFailsBeforeCooldown) {
+                    val cool = min(baseCooldownMs * genericFails, maxCooldownMs)
+                    cooldownUntil = SystemClock.elapsedRealtime() + cool
+                    genericFails = 0
+                }
+            }
             null
         }
     }
