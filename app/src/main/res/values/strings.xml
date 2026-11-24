@@ -26,11 +26,11 @@
     <string name="settings_save">Save</string>
     <string name="settings_assistant_button">Set Aero as default assistant</string>
     <string name="settings_assistant_helper">Replaces the current digital assistant (e.g. Gemini) with Aero when you hold the Home button / use the assistant gesture.</string>
-    <string name="settings_hotword_label">Hey Aero hotword</string>
-    <string name="settings_hotword_helper">Listen for "Hey Aero" in the background to summon Aero without opening the app. ON by default.</string>
-    <string name="settings_wake_label">Wake command</string>
-    <string name="settings_wake_hint">e.g. hey aero, wake up, aero sun…</string>
-    <string name="settings_wake_helper">Say this exact phrase (or anything that contains it) to wake Aero.</string>
+    <string name="settings_hotword_label">Wake command</string>
+    <string name="settings_hotword_helper">Say this to summon Aero. Always listening while Aero has microphone permission.</string>
+    <string name="settings_wake_label">Custom wake command (optional)</string>
+    <string name="settings_wake_hint">e.g. wake up, aero sun, hey buddy…</string>
+    <string name="settings_wake_helper">Replace the default "wake up" with your own phrase.</string>
     <string name="key_visibility_desc">Show or hide API key</string>
     <string name="settings_back">Back</string>
     <string name="settings_theme_label">Color theme</string>

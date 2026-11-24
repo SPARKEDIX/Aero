@@ -150,9 +150,10 @@ class HotwordService : Service() {
 
     private fun isWakePhrase(text: String): Boolean {
         // ONLY the user-defined wake command from Settings wakes Aero.
-        val custom = normalize(Prefs.wakePhrase(this))
+        // Spaces are ignored so "wakeup" matches a spoken "wake up".
+        val custom = normalize(Prefs.wakePhrase(this)).replace(" ", "")
         if (custom.length < 3) return false
-        val t = normalize(text)
+        val t = normalize(text).replace(" ", "")
         return t.contains(custom)
     }
 
@@ -186,7 +187,7 @@ class HotwordService : Service() {
         }
         return Notification.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_mic)
-            .setContentTitle("Aero is listening for \"Hey Aero\"")
+            .setContentTitle("Aero is listening for \"${Prefs.wakePhrase(this)}\"")
             .setOngoing(true)
             .build()
     }

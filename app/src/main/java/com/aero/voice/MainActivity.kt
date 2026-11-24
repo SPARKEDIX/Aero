@@ -237,8 +237,9 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         }
 
         // Hotword listening ("Hey Aero") only runs when the user opted in.
-        if (Prefs.hotwordEnabled(this)
-            && ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+        // The wake-command listener always runs while microphone permission is
+        // granted (it only matches the user's configured phrase).
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
             == PackageManager.PERMISSION_GRANTED
         ) {
             HotwordService.start(this)

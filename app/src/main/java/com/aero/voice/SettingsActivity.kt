@@ -12,7 +12,6 @@ import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.RadioGroup
 import android.widget.Spinner
-import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
@@ -117,19 +116,7 @@ class SettingsActivity : AppCompatActivity() {
             requestAssistantRole()
         }
 
-        // Hotword listening is ON by default; the user can switch it off.
-        val hotwordSwitch = findViewById<Switch>(R.id.hotwordSwitch)
-        hotwordSwitch.isChecked = Prefs.hotwordEnabled(this)
-        hotwordSwitch.setOnCheckedChangeListener { _, isChecked ->
-            Prefs.setHotwordEnabled(this, isChecked)
-            if (isChecked) {
-                HotwordService.start(this)
-            } else {
-                HotwordService.stop(this)
-            }
-        }
-
-        // Custom wake command — saved immediately, read live by the service.
+        // Wake command — saved immediately, read live by the service.
         val wakeInput = findViewById<EditText>(R.id.wakePhraseInput)
         wakeInput.setText(Prefs.wakePhrase(this))
         wakeInput.addTextChangedListener(

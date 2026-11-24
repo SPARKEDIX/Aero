@@ -20,7 +20,7 @@ object Prefs {
     const val DEFAULT_MODEL = "gemini-3.8-live"
     const val DEFAULT_VOICE = "Kore"
     const val DEFAULT_PROMPT = "You are a helpful voice assistant. Answer concisely and naturally. " + AeroIdentity.TEXT
-    const val DEFAULT_WAKE_PHRASE = "hey aero"
+    const val DEFAULT_WAKE_PHRASE = "wake up"
 
     fun apiKey(ctx: Context): String? =
         ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY_API, null)
