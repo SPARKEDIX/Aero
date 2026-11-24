@@ -250,21 +250,44 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         }
     }
 
-    /** Side buttons fly out of the mic when a session starts, and back in when it ends. */
+    /** Side buttons pop out of the mic like bubbles and slide back in on stop. */
     private fun setActionsExpanded(expanded: Boolean) {
-        for (group in listOf(leftActions, rightActions)) {
+        val groups = listOf(leftActions, rightActions)
+        groups.forEachIndexed { gi, group ->
+            val children = (0 until group.childCount).map { group.getChildAt(it) }
             if (expanded) {
                 group.visibility = View.VISIBLE
+                group.alpha = 1f
                 group.animate()
                     .scaleX(1f).scaleY(1f)
-                    .setDuration(260)
-                    .setInterpolator(OvershootInterpolator(1.2f))
+                    .setDuration(280)
+                    .setInterpolator(OvershootInterpolator(1.35f))
                     .start()
+                children.forEachIndexed { i, child ->
+                    child.alpha = 0f
+                    child.scaleX = 0.4f
+                    child.scaleY = 0.4f
+                    child.animate()
+                        .alpha(1f).scaleX(1f).scaleY(1f)
+                        .setStartDelay((i * 35L) + (gi * 20L))
+                        .setDuration(240)
+                        .setInterpolator(OvershootInterpolator(1.4f))
+                        .start()
+                }
             } else {
+                children.forEach { child ->
+                    child.animate()
+                        .alpha(0f).scaleX(0.4f).scaleY(0.4f)
+                        .setDuration(140)
+                        .setInterpolator(android.view.animation.AnticipateInterpolator(1.4f))
+                        .start()
+                }
                 group.animate()
                     .scaleX(0f).scaleY(0f)
-                    .setDuration(160)
-                    .withEndAction { group.visibility = View.GONE }
+                    .setStartDelay(30L)
+                    .setDuration(180)
+                    .setInterpolator(android.view.animation.AnticipateInterpolator(1.3f))
+                    .withEndAction { group.visibility = View.INVISIBLE }
                     .start()
             }
         }
@@ -562,6 +585,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                 .start()
             actionsRow.visibility = View.VISIBLE
             actionsRow.animate().alpha(1f).setDuration(220).start()
+            setActionsExpanded(sessionActive)
             settingsButton.visibility = View.VISIBLE
             settingsButton.animate().alpha(1f).setDuration(220).start()
             orbView.visibility = View.VISIBLE

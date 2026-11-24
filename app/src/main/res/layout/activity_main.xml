@@ -15,8 +15,8 @@
     <!-- Single settings button -->
     <ImageView
         android:id="@+id/settingsButton"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
         android:layout_gravity="top|end"
         android:layout_margin="24dp"
         android:background="@drawable/bg_circle_white"
@@ -25,10 +25,10 @@
         android:padding="16dp"
         android:contentDescription="@string/settings_desc" />
 
-    <!-- Mic + animated side actions -->
+    <!-- Mic + animated side actions (fixed width: mic never moves) -->
     <LinearLayout
         android:id="@+id/actionsRow"
-        android:layout_width="wrap_content"
+        android:layout_width="336dp"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
         android:layout_marginBottom="56dp"
@@ -40,7 +40,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:visibility="gone"
+            android:visibility="invisible"
             android:scaleX="0"
             android:scaleY="0">
 
@@ -48,7 +48,7 @@
                 android:id="@+id/screenShareButton"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:layout_margin="6dp"
+                android:layout_margin="8dp"
                 android:background="@drawable/bg_circle_white"
                 android:elevation="4dp"
                 android:src="@drawable/ic_screen_share"
@@ -58,7 +58,7 @@
                 android:id="@+id/liveButton"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:layout_margin="6dp"
+                android:layout_margin="8dp"
                 android:background="@drawable/bg_circle_white"
                 android:elevation="4dp"
                 android:src="@drawable/ic_video"
@@ -71,8 +71,8 @@
             android:id="@+id/micButton"
             android:layout_width="64dp"
             android:layout_height="64dp"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="4dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
             android:elevation="8dp"
             app:shapeAppearanceOverlay="@style/ShapeAppearance.AeroVoice.Circle"
             app:backgroundTint="@color/bg_circle"
@@ -87,7 +87,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:visibility="gone"
+            android:visibility="invisible"
             android:scaleX="0"
             android:scaleY="0">
 
@@ -95,7 +95,7 @@
                 android:id="@+id/muteButton"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:layout_margin="6dp"
+                android:layout_margin="8dp"
                 android:background="@drawable/bg_circle_white"
                 android:elevation="4dp"
                 android:src="@drawable/ic_mic"
@@ -105,20 +105,15 @@
                 android:id="@+id/attachButton"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:layout_margin="6dp"
+                android:layout_margin="8dp"
                 android:background="@drawable/bg_circle_white"
                 android:elevation="4dp"
                 android:src="@drawable/ic_plus"
                 android:contentDescription="@string/attach_desc" />
 
-            <!-- Balances the 3 left buttons so the mic stays exactly centred -->
-            <View
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_margin="6dp" />
+
         </LinearLayout>
     </LinearLayout>
-
     <!-- Live camera window: replaces the orb while sharing -->
     <FrameLayout
         android:id="@+id/cameraWindow"
