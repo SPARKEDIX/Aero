@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Handler
@@ -17,6 +18,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.ImageButton
+import androidx.core.app.ServiceCompat
 import kotlin.math.abs
 
 /** Floating mini-orb shown after screen share. Draggable, tap to expand controls. */
@@ -37,7 +39,16 @@ class FloatingOrbService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        startForeground(NOTIFICATION_ID, buildNotification())
+        val notification = buildNotification()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            ServiceCompat.startForeground(
+                this, NOTIFICATION_ID, notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
+        android.util.Log.d("AeroOverlay", "foreground started")
 
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         root = LayoutInflater.from(this).inflate(R.layout.view_overlay, null)
