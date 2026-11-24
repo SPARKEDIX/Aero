@@ -24,9 +24,9 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_settings)
 
         val keyInput = findViewById<EditText>(R.id.keyInput)
-        val modelInput = findViewById<EditText>(R.id.modelInput)
         val voiceSpinner = findViewById<Spinner>(R.id.voiceSpinner)
-        val promptInput = findViewById<EditText>(R.id.promptInput)
+        val moodSpinner = findViewById<Spinner>(R.id.moodSpinner)
+        val moodHint = findViewById<TextView>(R.id.moodHint)
         val status = findViewById<TextView>(R.id.settingsStatus)
 
         // Color theme: Light keeps the current look; Dark and System are dark.
@@ -55,12 +55,30 @@ class SettingsActivity : AppCompatActivity() {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
 
-        keyInput.setText(Prefs.apiKey(this) ?: "")
-        modelInput.setText(Prefs.modelId(this))
-        promptInput.setText(Prefs.systemPrompt(this))
         val savedVoice = Prefs.voice(this)
-        val idx = voices.indexOfFirst { it == savedVoice }.coerceAtLeast(0)
-        voiceSpinner.setSelection(idx)
+        voiceSpinner.setSelection(voices.indexOfFirst { it == savedVoice }.coerceAtLeast(0))
+
+        // Mood replaces the old Model ID + System instruction sections.
+        val moodKeys = MoodPalette.ALL
+        val moodLabels = moodKeys.map { MoodPalette.forKey(it).label }
+        moodSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, moodLabels).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        moodSpinner.setSelection(moodKeys.indexOf(Prefs.mood(this)).coerceAtLeast(0))
+        moodHint.text = MoodPalette.forKey(Prefs.mood(this)).useCase
+        moodSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>, view: android.view.View?, pos: Int, id: Long) {
+                val key = moodKeys[pos]
+                val hint = MoodPalette.forKey(key).useCase
+                if (moodHint.text.toString() != hint) {
+                    Prefs.saveMood(this@SettingsActivity, key)
+                    moodHint.text = hint
+                }
+            }
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>) {}
+        }
+
+        keyInput.setText(Prefs.apiKey(this) ?: "")
 
         findViewById<TextView>(R.id.backButton).setOnClickListener {
             finish()
@@ -68,14 +86,12 @@ class SettingsActivity : AppCompatActivity() {
 
         findViewById<MaterialButton>(R.id.saveButton).setOnClickListener {
             val key = keyInput.text.toString().trim()
-            val model = modelInput.text.toString().trim().ifEmpty { Prefs.DEFAULT_MODEL }
             if (key.isEmpty()) {
                 status.text = "Please enter your Google AI Studio API key."
                 return@setOnClickListener
             }
             val voice = voices[voiceSpinner.selectedItemPosition]
-            val prompt = promptInput.text.toString().trim().ifEmpty { Prefs.DEFAULT_PROMPT }
-            Prefs.save(this, key, model, voice, prompt)
+            Prefs.save(this, key, voice)
             status.text = "Saved. Testing key…"
             testKey(key, status)
         }

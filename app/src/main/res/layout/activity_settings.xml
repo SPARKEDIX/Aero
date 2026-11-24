@@ -89,6 +89,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
                 android:text="@string/settings_key_label"
                 android:textColor="@color/text_primary"
                 android:textSize="15sp"
@@ -120,29 +121,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:text="@string/settings_model_label"
-                android:textColor="@color/text_primary"
-                android:textSize="15sp"
-                android:textStyle="bold" />
-
-            <EditText
-                android:id="@+id/modelInput"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/bg_input"
-                android:padding="14dp"
-                android:textColor="@color/text_primary"
-                android:textColorHint="@color/text_secondary"
-                android:textSize="14sp"
-                android:inputType="text"
-                android:hint="@string/settings_model_hint"
-                android:text="gemini-3.8-live" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
                 android:text="@string/settings_voice_label"
                 android:textColor="@color/text_primary"
                 android:textSize="15sp"
@@ -156,29 +134,32 @@
                 android:background="@drawable/bg_input"
                 android:padding="4dp" />
 
+            <!-- Replaces the old Model ID + System instruction sections -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:text="@string/settings_prompt_label"
+                android:text="@string/settings_mood_label"
                 android:textColor="@color/text_primary"
                 android:textSize="15sp"
                 android:textStyle="bold" />
 
-            <EditText
-                android:id="@+id/promptInput"
+            <Spinner
+                android:id="@+id/moodSpinner"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:background="@drawable/bg_input"
-                android:padding="14dp"
-                android:textColor="@color/text_primary"
-                android:textColorHint="@color/text_secondary"
-                android:textSize="14sp"
-                android:inputType="textMultiLine"
-                android:minLines="3"
-                android:gravity="top"
-                android:hint="e.g. You are a helpful voice assistant…" />
+                android:padding="4dp" />
+
+            <TextView
+                android:id="@+id/moodHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:lineSpacingExtra="2dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/saveButton"

@@ -62,6 +62,10 @@ class OrbView @JvmOverloads constructor(
     private var runtimeShader: RuntimeShader? = null
     private var noiseShader: BitmapShader? = null
 
+    // Mood only changes the COLOURS. The smoke/animation math is untouched.
+    @Volatile
+    private var palette: MoodPalette = MoodPalette.forKey(MoodPalette.PROFESSIONAL)
+
     private val startAt = SystemClock.elapsedRealtime()
 
     private val animator = ValueAnimator.ofFloat(0f, 1f).apply {
@@ -86,27 +90,45 @@ class OrbView @JvmOverloads constructor(
         cy = h * 0.48f
         baseR = min(w, h) * 0.30f
 
+        applyPalettePaints()
+
+        if (Build.VERSION.SDK_INT >= 33) ensureRuntimeShader()
+    }
+
+    /** Changes orb colours only — the smoke/animation logic is not modified. */
+    fun setMood(key: String) {
+        val next = MoodPalette.forKey(key)
+        if (next.key == palette.key) return
+        palette = next
+        if (baseR > 0f) applyPalettePaints()
+        postInvalidateOnAnimation()
+    }
+
+    private fun applyPalettePaints() {
         basePaint.shader = LinearGradient(
             cx, cy - baseR, cx, cy + baseR,
             intArrayOf(
-                0xFF5B5BF0.toInt(),
-                0xFF7B86FF.toInt(),
-                0xFF9AA5FF.toInt(),
-                0xFFB7C0FF.toInt(),
-                0xFFD6DCFF.toInt()
+                palette.top,
+                palette.top,
+                palette.smoke,
+                palette.bottom,
+                0xFFFFFFFF.toInt()
             ),
             floatArrayOf(0f, 0.34f, 0.62f, 0.84f, 1f),
             Shader.TileMode.CLAMP
         )
 
+        val glow = palette.bottom and 0x00FFFFFF
         glowPaint.shader = RadialGradient(
             cx, cy + baseR * 0.18f, baseR * 1.30f,
-            intArrayOf(0x1E5B5BF0, 0x0A5B5BF0, 0x00000000),
+            intArrayOf(
+                0x1E000000.toInt() or glow,
+                0x0A000000.toInt() or glow,
+                0x00000000
+            ),
             floatArrayOf(0f, 0.75f, 1f),
             Shader.TileMode.CLAMP
         )
-
-        if (Build.VERSION.SDK_INT >= 33) ensureRuntimeShader()
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -170,8 +192,21 @@ class OrbView @JvmOverloads constructor(
         shader.setFloatUniform("uRadius", r)
         shader.setFloatUniform("uTime", now)
         shader.setFloatUniform("uEnergy", activity)
+        setColorUniform(shader, "uTop", palette.top)
+        setColorUniform(shader, "uBottom", palette.bottom)
+        setColorUniform(shader, "uSmoke", palette.smoke)
         shaderPaint.shader = shader
         canvas.drawCircle(cx, cy, r, shaderPaint)
+    }
+
+    @RequiresApi(33)
+    private fun setColorUniform(shader: RuntimeShader, name: String, color: Int) {
+        shader.setFloatUniform(
+            name,
+            ((color shr 16) and 0xFF) / 255f,
+            ((color shr 8) and 0xFF) / 255f,
+            (color and 0xFF) / 255f
+        )
     }
 
     private fun drawFallbackOrb(canvas: Canvas, r: Float, now: Float) {
@@ -293,6 +328,9 @@ uniform float uRadius;
 uniform float uTime;
 uniform float uEnergy;
 uniform shader uNoise;
+uniform float3 uTop;
+uniform float3 uBottom;
+uniform float3 uSmoke;
 
 float2 rot(float2 p, float a) {
     float c = cos(a);
@@ -310,10 +348,10 @@ half4 main(float2 fragCoord) {
 
     // Base sphere: saturated blue-violet with a soft lighter core.
     float g = clamp(uv.y * 0.5 + 0.5, 0.0, 1.0);
-    float3 top = float3(0.345, 0.345, 0.945);
-    float3 bot = float3(0.565, 0.600, 1.000);
+    float3 top = uTop;
+    float3 bot = uBottom;
     float3 col = mix(top, bot, smoothstep(0.0, 1.0, g));
-    col += float3(0.055, 0.060, 0.095) * (1.0 - smoothstep(0.0, 0.95, d));
+    col += uSmoke * 0.10 * (1.0 - smoothstep(0.0, 0.95, d));
 
     // Time: slow always-on drift, gently faster while the AI speaks.
     float t = uTime * (1.0 + 0.9 * uEnergy);
@@ -326,18 +364,18 @@ half4 main(float2 fragCoord) {
     float s = sampleN(rot(q, t * 0.040) * 1.25 + float2(t * 0.018, -t * 0.014));
     s = smoothstep(0.36, 0.78, s);
 
-    float3 smokeCol = mix(float3(0.70, 0.76, 1.0), float3(1.0), smoothstep(0.15, 0.95, s));
+    float3 smokeCol = mix(uSmoke, float3(1.0), smoothstep(0.15, 0.95, s));
     col = mix(col, smokeCol, (0.72 + 0.16 * uEnergy) * s);
 
     // Extra soft light patches for depth.
     float h = sampleN(rot(p * 0.62 + 11.3, t * 0.022) + float2(-t * 0.010, t * 0.014));
     h = smoothstep(0.58, 0.92, h);
-    col += float3(0.15, 0.16, 0.19) * h * (0.45 + 0.35 * uEnergy);
+    col += uSmoke * 0.18 * h * (0.45 + 0.35 * uEnergy);
 
     // Sphere shading + rim light.
     float shade = 1.0 - smoothstep(0.15, 1.05, d);
     col *= 0.86 + 0.14 * shade;
-    col += float3(0.10, 0.11, 0.18) * smoothstep(0.86, 1.0, d);
+    col += uSmoke * 0.17 * smoothstep(0.86, 1.0, d);
 
     return half4(half3(min(col, float3(1.0))), 1.0);
 }

@@ -72,6 +72,8 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        orbView.setMood(Prefs.mood(this))
+
         findViewById<ImageView>(R.id.settingsButton).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
@@ -83,6 +85,12 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         if (Prefs.apiKey(this) == null) {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Settings may have changed the mood while we were away.
+        orbView.setMood(Prefs.mood(this))
     }
 
     private fun startSession() {
@@ -103,11 +111,12 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         handler.post(drainRunnable)
 
         player = AudioPlayer().also { it.start() }
+        val mood = MoodPalette.forKey(Prefs.mood(this))
         client = GeminiLiveClient(
             key,
             Prefs.modelId(this),
             Prefs.voice(this),
-            Prefs.systemPrompt(this),
+            mood.instruction,
             this
         ).also { it.connect() }
     }

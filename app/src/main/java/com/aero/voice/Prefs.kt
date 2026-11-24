@@ -9,6 +9,7 @@ object Prefs {
     private const val KEY_VOICE = "voice"
     private const val KEY_PROMPT = "system_prompt"
     private const val KEY_THEME = "theme"
+    private const val KEY_MOOD = "mood"
 
     const val THEME_LIGHT = "light"
     const val THEME_DARK = "dark"
@@ -39,12 +40,20 @@ object Prefs {
             .apply()
     }
 
-    fun save(ctx: Context, apiKey: String, model: String, voice: String, prompt: String) {
+    fun mood(ctx: Context): String =
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getString(KEY_MOOD, MoodPalette.PROFESSIONAL) ?: MoodPalette.PROFESSIONAL
+
+    fun saveMood(ctx: Context, mood: String) {
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
+            .putString(KEY_MOOD, mood)
+            .apply()
+    }
+
+    fun save(ctx: Context, apiKey: String, voice: String) {
         ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
             .putString(KEY_API, apiKey)
-            .putString(KEY_MODEL, model)
             .putString(KEY_VOICE, voice)
-            .putString(KEY_PROMPT, prompt)
             .apply()
     }
 }
