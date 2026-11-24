@@ -244,6 +244,39 @@
                 android:lineSpacingExtra="2dp" />
 
             <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/settings_wake_label"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/wakePhraseInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:paddingTop="14dp"
+                android:paddingBottom="14dp"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_secondary"
+                android:textSize="14sp"
+                android:hint="@string/settings_wake_hint" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/settings_wake_helper"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:lineSpacingExtra="2dp" />
+
+            <TextView
                 android:id="@+id/settingsStatus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

@@ -3,6 +3,7 @@ package com.aero.voice
 import android.app.role.RoleManager
 import android.content.Intent
 import android.os.Bundle
+import android.text.Editable
 import android.text.InputType
 import android.view.View
 import android.widget.AdapterView
@@ -116,7 +117,7 @@ class SettingsActivity : AppCompatActivity() {
             requestAssistantRole()
         }
 
-        // Hotword listening is opt-in; off by default to keep battery healthy.
+        // Hotword listening is ON by default; the user can switch it off.
         val hotwordSwitch = findViewById<Switch>(R.id.hotwordSwitch)
         hotwordSwitch.isChecked = Prefs.hotwordEnabled(this)
         hotwordSwitch.setOnCheckedChangeListener { _, isChecked ->
@@ -127,6 +128,22 @@ class SettingsActivity : AppCompatActivity() {
                 HotwordService.stop(this)
             }
         }
+
+        // Custom wake command — saved immediately, read live by the service.
+        val wakeInput = findViewById<EditText>(R.id.wakePhraseInput)
+        wakeInput.setText(Prefs.wakePhrase(this))
+        wakeInput.addTextChangedListener(
+            object : android.text.TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                override fun afterTextChanged(s: Editable?) {
+                    val phrase = s?.toString()?.trim().orEmpty()
+                    if (phrase.length >= 3) {
+                        Prefs.setWakePhrase(this@SettingsActivity, phrase)
+                    }
+                }
+            }
+        )
     }
 
     // True while we've asked the system to switch the assistant role.

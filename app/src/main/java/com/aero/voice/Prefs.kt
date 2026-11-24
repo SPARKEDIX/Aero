@@ -11,6 +11,7 @@ object Prefs {
     private const val KEY_THEME = "theme"
     private const val KEY_MOOD = "mood"
     private const val KEY_HOTWORD = "hotword_enabled"
+    private const val KEY_WAKE_PHRASE = "wake_phrase"
 
     const val THEME_LIGHT = "light"
     const val THEME_DARK = "dark"
@@ -19,6 +20,7 @@ object Prefs {
     const val DEFAULT_MODEL = "gemini-3.8-live"
     const val DEFAULT_VOICE = "Kore"
     const val DEFAULT_PROMPT = "You are a helpful voice assistant. Answer concisely and naturally. " + AeroIdentity.TEXT
+    const val DEFAULT_WAKE_PHRASE = "hey aero"
 
     fun apiKey(ctx: Context): String? =
         ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY_API, null)
@@ -51,14 +53,26 @@ object Prefs {
             .apply()
     }
 
-    /** Hotword ("Hey Aero") is opt-in — off by default to save battery. */
+    /** Hotword ("Hey Aero") is ON by default. */
     fun hotwordEnabled(ctx: Context): Boolean =
         ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-            .getBoolean(KEY_HOTWORD, false)
+            .getBoolean(KEY_HOTWORD, true)
 
     fun setHotwordEnabled(ctx: Context, enabled: Boolean) {
         ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
             .putBoolean(KEY_HOTWORD, enabled)
+            .apply()
+    }
+
+    /** Custom wake phrase the user speaks (defaults to "hey aero"). */
+    fun wakePhrase(ctx: Context): String =
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getString(KEY_WAKE_PHRASE, DEFAULT_WAKE_PHRASE)
+            ?: DEFAULT_WAKE_PHRASE
+
+    fun setWakePhrase(ctx: Context, phrase: String) {
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
+            .putString(KEY_WAKE_PHRASE, phrase.trim())
             .apply()
     }
 
