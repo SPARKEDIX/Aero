@@ -114,16 +114,15 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             if (result.resultCode == RESULT_OK && result.data != null) {
                 Log.d("AeroScreen", "consent OK, starting projection service")
                 // Android 14+ requires the MediaProjection to live inside a
-                // foreground service of type mediaProjection. Pass the consent
-                // result to FloatingOrbService, which owns capture + overlay.
-                val intent = Intent(this, FloatingOrbService::class.java).apply {
-                    putExtra(FloatingOrbService.EXTRA_CODE, result.resultCode)
-                    putExtra(FloatingOrbService.EXTRA_DATA, result.data)
+                // foreground service of type mediaProjection.
+                val intent = Intent(this, ScreenShareService::class.java).apply {
+                    putExtra(ScreenShareService.EXTRA_CODE, result.resultCode)
+                    putExtra(ScreenShareService.EXTRA_DATA, result.data)
                 }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                try {
                     startForegroundService(intent)
-                } else {
-                    startService(intent)
+                } catch (t: Throwable) {
+                    Log.e("AeroScreen", "failed to start projection service", t)
                 }
                 miniOrb.visibility = View.VISIBLE
             } else {
@@ -259,6 +258,12 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     }
 
     private fun startFloatingOrb() {
+        // Overlay permission is required to draw on top of other apps;
+        // without it, addView crashes. Bail out silently instead.
+        if (!Settings.canDrawOverlays(this)) {
+            Log.w("AeroOverlay", "overlay permission missing, skipping floating orb")
+            return
+        }
         try {
             startForegroundService(Intent(this, FloatingOrbService::class.java))
         } catch (t: Throwable) {
@@ -271,7 +276,8 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     }
 
     private fun stopProjection() {
-        stopFloatingOrb() // stops MediaProjectionHolder + removes overlay
+        stopService(Intent(this, ScreenShareService::class.java)) // stops MediaProjectionHolder
+        stopFloatingOrb() // removes overlay
         miniOrb.visibility = View.GONE
     }
 
@@ -297,7 +303,6 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         sessionActive = true
         AeroState.sessionActive = true
         AeroState.micMuted = false
-        AeroState.liveClient = client
         KeepAliveService.start(this)
         setMicActiveUI(true)
         handler.post(drainRunnable)
@@ -311,6 +316,8 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             mood.instruction,
             this
         ).also { it.connect() }
+        // MUST set after client is created so screen-share frames can reach it.
+        AeroState.liveClient = client
     }
 
     private fun stopSession() {

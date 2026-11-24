@@ -36,16 +36,8 @@ class FloatingOrbService : Service() {
     private var initialY = 0
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val code = intent?.getIntExtra(EXTRA_CODE, -1) ?: -1
-        val data = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent?.getParcelableExtra(EXTRA_DATA, Intent::class.java)
-        } else {
-            @Suppress("DEPRECATION") intent?.getParcelableExtra(EXTRA_DATA)
-        }
-        if (code != -1 && data != null) {
-            MediaProjectionHolder.start(this, code, data)
-            android.util.Log.d("AeroOverlay", "media projection session started in service")
-        }
+        // Projection is owned by ScreenShareService now; this service only
+        // draws the floating orb.
         return START_STICKY
     }
 
@@ -249,7 +241,7 @@ class FloatingOrbService : Service() {
 
     override fun onDestroy() {
         handler.removeCallbacks(boostPump)
-        MediaProjectionHolder.stop()
+        // Projection is owned by ScreenShareService; only remove the overlay here.
         if (::root.isInitialized) {
             try {
                 windowManager.removeView(root)

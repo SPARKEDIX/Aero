@@ -47,6 +47,15 @@ object MediaProjectionHolder {
             val manager = app.getSystemService(MediaProjectionManager::class.java)
             val p = manager.getMediaProjection(code, data)
             val r = ImageReader.newInstance(w, h, PixelFormat.RGBA_8888, 2)
+
+            // Android 14+ REQUIRES the callback to be registered BEFORE
+            // createVirtualDisplay(), otherwise it throws IllegalStateException.
+            p.registerCallback(object : MediaProjection.Callback() {
+                override fun onStop() {
+                    handler.post { running = false }
+                }
+            }, handler)
+
             val d = p.createVirtualDisplay(
                 "AeroScreen", w, h, dpi,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
@@ -56,12 +65,6 @@ object MediaProjectionHolder {
             reader = r
             display = d
             running = true
-
-            p.registerCallback(object : MediaProjection.Callback() {
-                override fun onStop() {
-                    handler.post { running = false }
-                }
-            }, handler)
 
             handler.postDelayed(captureRunnable, 500L)
             Log.d(TAG, "media projection started ${w}x${h}@$dpi")
