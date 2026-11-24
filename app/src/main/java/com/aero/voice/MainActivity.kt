@@ -783,6 +783,8 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         return bitmap
     }
 
+    private var screenFrameCount = 0
+
     private fun captureScreenFrame() {
         val reader = screenReader ?: return
         val image = reader.acquireLatestImage() ?: return
@@ -791,9 +793,22 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             val scaled = scaleDown(bitmap, 640)
             val baos = java.io.ByteArrayOutputStream()
             scaled.compress(Bitmap.CompressFormat.JPEG, 60, baos)
+
+            // Send the raw frame to Gemini vision...
+            client?.sendImage(baos.toByteArray())
+
+            // ...and run the on-device Mirage OCR every 3rd frame, then feed
+            // its text into the same conversation.
+            screenFrameCount++
+            if (Mirage.isReady && screenFrameCount % 3 == 0) {
+                val text = Mirage.describe(scaled)
+                if (text.isNotBlank()) {
+                    client?.sendContextText("Screen content: $text")
+                }
+            }
+
             if (scaled !== bitmap) scaled.recycle()
             bitmap.recycle()
-            client?.sendImage(baos.toByteArray())
             Log.d("AeroScreen", "frame sent: ${baos.size()} bytes")
         } catch (t: Throwable) {
             Log.e("AeroScreen", "frame failed", t)
@@ -837,6 +852,10 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             screenDisplay = display
             // Show the floating orb immediately — it must appear with the share.
             startFloatingOrb()
+            searchScope.launch {
+                Mirage.load(this@MainActivity)
+                Log.d("AeroScreen", "Mirage ready=${Mirage.isReady}")
+            }
             miniOrb.visibility = View.VISIBLE
             handler.post(miniOrbPump)
             captureScreenFrame()
