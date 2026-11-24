@@ -227,7 +227,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         // Vibrate the orb with the assistant's own voice + speed up its smoke.
         // A floor guarantees a clearly visible vibration even in quiet passages.
         val level = (rms(bytes) / 0.06f).coerceIn(0f, 1f)
-        orbView.aiBoost = 0.50f + 0.50f * level
+        orbView.onAiAudio(level)
         player?.enqueue(bytes)
     }
 

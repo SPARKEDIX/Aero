@@ -43,6 +43,12 @@ class OrbView @JvmOverloads constructor(
     @Volatile
     var aiBoost = 0f
 
+    // Held while AI audio keeps arriving — fixes the "vibrates once then stops" bug.
+    @Volatile
+    private var aiLevel = 0f
+    @Volatile
+    private var lastAiAudioMs = 0L
+
     // Smoothed values used for drawing (no abrupt jumps).
     private var micSmooth = 0f
     private var aiSmooth = 0f
@@ -82,6 +88,13 @@ class OrbView @JvmOverloads constructor(
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         if (!animator.isStarted) animator.start()
+    }
+
+    /** Called for every AI audio chunk — keeps the orb vibrating for the whole reply. */
+    fun onAiAudio(level: Float) {
+        aiLevel = level.coerceIn(0f, 1f)
+        lastAiAudioMs = SystemClock.elapsedRealtime()
+        aiBoost = 0.5f + 0.5f * aiLevel
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -135,11 +148,18 @@ class OrbView @JvmOverloads constructor(
         super.onDraw(canvas)
         if (baseR <= 0f) return
 
-        // Decay raw targets, then low-pass them for buttery-smooth motion.
+        // Decay the user's boost, low-pass it, and hold the AI boost while its
+        // audio keeps arriving. The old per-frame AI decay made vibration die out.
+        val nowMs = SystemClock.elapsedRealtime()
         micBoost *= 0.90f
-        aiBoost *= 0.93f
         micSmooth += (micBoost.coerceIn(0f, 1f) - micSmooth) * 0.10f
-        aiSmooth += (aiBoost.coerceIn(0f, 1f) - aiSmooth) * 0.10f
+        val aiTarget = if (nowMs - lastAiAudioMs < AI_HOLD_MS) {
+            0.75f + 0.25f * aiLevel
+        } else {
+            0f
+        }
+        val aiK = if (aiTarget > aiSmooth) 0.30f else 0.10f
+        aiSmooth += (aiTarget - aiSmooth) * aiK
         val mic = micSmooth.coerceIn(0f, 1f)
         val ai = aiSmooth.coerceIn(0f, 1f)
         val activity = maxOf(mic, ai)
@@ -150,12 +170,16 @@ class OrbView @JvmOverloads constructor(
         // Gentle breathing + clear voice-reactive vibration.
         val breathe = 0.008f * sin(now * 0.55f)
         val twoPi = (2f * Math.PI).toFloat()
-        // AI speech: pronounced fast wobble. User speech: slightly softer.
-        val aiVib = 0.045f * ai * sin(now * 5.4f * twoPi)
+        // Sustained AI wobble: a main pulse plus a faster ripple, both held for
+        // the whole reply (not just the first audio chunk).
+        val aiVib = ai * (
+            0.055f * sin(now * 5.4f * twoPi) +
+                0.018f * sin(now * 11.0f * twoPi)
+            )
         val micVib = 0.030f * mic * sin(now * 4.2f * twoPi)
         val r = baseR * (1f + breathe + aiVib + micVib)
-        // A slight squash/stretch makes the vibration read clearly.
-        val squash = 0.014f * activity * sin(now * 5.4f * twoPi + 0.9f)
+        // Squash/stretch makes the vibration read clearly while AI speaks.
+        val squash = (0.014f * mic + 0.022f * ai) * sin(now * 5.4f * twoPi + 0.9f)
 
         // Soft halo
         canvas.drawCircle(
@@ -318,6 +342,9 @@ class OrbView @JvmOverloads constructor(
     }
 
     companion object {
+        /** Keep the AI vibration alive between audio chunks. */
+        private const val AI_HOLD_MS = 700L
+
         /**
          * AGSL: blue-violet sphere with soft, always-flowing smoke.
          * Four texture fetches per pixel — cheap enough for 60fps on budget GPUs.
