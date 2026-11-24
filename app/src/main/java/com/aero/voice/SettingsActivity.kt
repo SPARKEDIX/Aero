@@ -1,21 +1,19 @@
 package com.aero.voice
 
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
+import android.text.InputType
+import android.view.View
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.RadioGroup
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
-import java.net.HttpURLConnection
-import java.net.URL
 
 class SettingsActivity : AppCompatActivity() {
-
-    private val handler = Handler(Looper.getMainLooper())
 
     private val voices = arrayOf("Kore", "Puck", "Charon", "Fenrir", "Aoede")
 
@@ -24,10 +22,26 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_settings)
 
         val keyInput = findViewById<EditText>(R.id.keyInput)
+        val keyEye = findViewById<ImageButton>(R.id.keyEyeButton)
         val voiceSpinner = findViewById<Spinner>(R.id.voiceSpinner)
         val moodSpinner = findViewById<Spinner>(R.id.moodSpinner)
         val moodHint = findViewById<TextView>(R.id.moodHint)
         val status = findViewById<TextView>(R.id.settingsStatus)
+
+        // Show / hide the API key. Starts hidden (dots).
+        var keyVisible = false
+        keyInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        keyEye.setOnClickListener {
+            keyVisible = !keyVisible
+            if (keyVisible) {
+                keyInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                keyEye.setImageResource(R.drawable.ic_eye_off)
+            } else {
+                keyInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+                keyEye.setImageResource(R.drawable.ic_eye)
+            }
+            keyInput.setSelection(keyInput.text?.length ?: 0)
+        }
 
         // Color theme: Light keeps the current look; Dark and System are dark.
         val themeGroup = findViewById<RadioGroup>(R.id.themeRadioGroup)
@@ -54,9 +68,9 @@ class SettingsActivity : AppCompatActivity() {
         voiceSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, voices).apply {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
-
-        val savedVoice = Prefs.voice(this)
-        voiceSpinner.setSelection(voices.indexOfFirst { it == savedVoice }.coerceAtLeast(0))
+        voiceSpinner.setSelection(
+            voices.indexOfFirst { it == Prefs.voice(this) }.coerceAtLeast(0)
+        )
 
         // Mood replaces the old Model ID + System instruction sections.
         val moodKeys = MoodPalette.ALL
@@ -66,8 +80,8 @@ class SettingsActivity : AppCompatActivity() {
         }
         moodSpinner.setSelection(moodKeys.indexOf(Prefs.mood(this)).coerceAtLeast(0))
         moodHint.text = MoodPalette.forKey(Prefs.mood(this)).useCase
-        moodSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: android.widget.AdapterView<*>, view: android.view.View?, pos: Int, id: Long) {
+        moodSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, pos: Int, id: Long) {
                 val key = moodKeys[pos]
                 val hint = MoodPalette.forKey(key).useCase
                 if (moodHint.text.toString() != hint) {
@@ -75,7 +89,7 @@ class SettingsActivity : AppCompatActivity() {
                     moodHint.text = hint
                 }
             }
-            override fun onNothingSelected(parent: android.widget.AdapterView<*>) {}
+            override fun onNothingSelected(parent: AdapterView<*>) {}
         }
 
         keyInput.setText(Prefs.apiKey(this) ?: "")
@@ -92,26 +106,7 @@ class SettingsActivity : AppCompatActivity() {
             }
             val voice = voices[voiceSpinner.selectedItemPosition]
             Prefs.save(this, key, voice)
-            status.text = "Saved. Testing key…"
-            testKey(key, status)
+            status.text = "Saved."
         }
-    }
-
-    private fun testKey(key: String, status: TextView) {
-        Thread {
-            val result = try {
-                val conn = URL("https://generativelanguage.googleapis.com/v1beta/models?key=$key")
-                    .openConnection() as HttpURLConnection
-                conn.connectTimeout = 10000
-                conn.readTimeout = 10000
-                when (conn.responseCode) {
-                    200 -> "API key OK ✓  You're ready to talk."
-                    else -> "API key rejected (HTTP ${conn.responseCode}). Check the key."
-                }
-            } catch (e: Exception) {
-                "Network error: ${e.message}"
-            }
-            handler.post { status.text = result }
-        }.start()
     }
 }

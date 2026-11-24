@@ -10,6 +10,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
@@ -20,7 +21,7 @@
             android:text="@string/settings_back"
             android:textSize="16sp"
             android:textColor="@color/accent"
-            android:padding="8dp" />
+            android:padding="12dp" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -95,18 +96,36 @@
                 android:textSize="15sp"
                 android:textStyle="bold" />
 
-            <EditText
-                android:id="@+id/keyInput"
+            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/bg_input"
-                android:padding="14dp"
-                android:textColor="@color/text_primary"
-                android:textColorHint="@color/text_secondary"
-                android:textSize="14sp"
-                android:inputType="text"
-                android:hint="@string/settings_key_hint" />
+                android:layout_marginTop="8dp">
+
+                <EditText
+                    android:id="@+id/keyInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_input"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="52dp"
+                    android:paddingTop="14dp"
+                    android:paddingBottom="14dp"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_secondary"
+                    android:textSize="14sp"
+                    android:inputType="textPassword"
+                    android:hint="@string/settings_key_hint" />
+
+                <ImageButton
+                    android:id="@+id/keyEyeButton"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="end|center_vertical"
+                    android:layout_marginEnd="6dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_eye"
+                    android:contentDescription="@string/key_visibility_desc" />
+            </FrameLayout>
 
             <TextView
                 android:layout_width="match_parent"

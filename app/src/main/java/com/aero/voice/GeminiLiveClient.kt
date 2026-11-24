@@ -53,7 +53,8 @@ class GeminiLiveClient(
         private const val MIME_PCM_16K = "audio/pcm"
         private val AUDIO_OUT_PREAMBLE = "audio_output".toByteArray(Charsets.US_ASCII)
 
-        private val INTERNET_INSTRUCTIONS = """
+        private val INTERNET_INSTRUCTIONS = AeroIdentity.TEXT + """
+
             You can access the live internet with the `web_search` tool.
             Use it whenever the user asks about news, current events, weather, prices, sports,
             or any fact that may have changed recently. Call the tool before answering such

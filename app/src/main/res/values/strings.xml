@@ -18,7 +18,8 @@
     <string name="settings_model_hint">gemini-3.8-live</string>
     <string name="settings_voice_label">Voice</string>
     <string name="settings_prompt_label">System instruction (optional)</string>
-    <string name="settings_save">Save &amp; Test</string>
+    <string name="settings_save">Save</string>
+    <string name="key_visibility_desc">Show or hide API key</string>
     <string name="settings_back">Back</string>
     <string name="settings_theme_label">Color theme</string>
     <string name="settings_mood_label">Mood</string>
