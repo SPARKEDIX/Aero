@@ -200,6 +200,8 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     override fun onResume() {
         super.onResume()
+        // In-app there is no floating ball — it only lives while screen sharing.
+        stopFloatingOrb()
         // Settings may have changed the mood while we were away.
         orbView.setMood(Prefs.mood(this))
     }
@@ -217,6 +219,8 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                 )
             }
             FloatingOrbService.ACTION_OPEN_CAMERA -> {
+                stopFloatingOrb()
+                stopProjection()
                 if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                     == PackageManager.PERMISSION_GRANTED
                 ) {
@@ -424,7 +428,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                     if (!micOpen) return@AudioRecorder
                 }
 
-                if (!micMuted) client?.sendAudio(chunk)
+                if (!micMuted && !AeroState.micMuted) client?.sendAudio(chunk)
                 val p = player
                 if (p != null && now - lastFlushAt > 400) {
                     lastFlushAt = now
@@ -753,6 +757,15 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     private val screenCaptureRunnable = object : Runnable {
         override fun run() {
             val reader = screenReader ?: return
+            // Never push frames while the assistant is speaking or the mic is
+            // gated — otherwise every frame starts a new turn and the user's
+            // speech never reaches Gemini (mic looks "off").
+            if (!micOpen || AeroState.micMuted ||
+                SystemClock.elapsedRealtime() - lastAssistantAudioAt < 3000L
+            ) {
+                handler.postDelayed(this, 1000L)
+                return
+            }
             val image = reader.acquireLatestImage()
             if (image == null) {
                 handler.postDelayed(this, 1000L)
