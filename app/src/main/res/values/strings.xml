@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Aero Voice</string>
+    <string name="settings_desc">Settings</string>
+    <string name="mic_desc">Talk</string>
+    <string name="status_ready">Tap the mic to start talking</string>
+    <string name="status_need_key">Set up your Google API key first</string>
+    <string name="status_connecting">Connecting…</string>
+    <string name="status_connected">Connected ✓</string>
+    <string name="status_listening">Listening… speak now</string>
+    <string name="status_error">Error: %1$s</string>
+    <string name="status_mic_permission">Microphone permission is required</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_key_label">Google AI Studio API Key</string>
+    <string name="settings_key_hint">Paste your API key here</string>
+    <string name="settings_key_helper">Get a free key at aistudio.google.com → Get API key → Create API key. No folder selection needed — just copy the key.</string>
+    <string name="settings_model_label">Model ID</string>
+    <string name="settings_model_hint">gemini-3.8-live</string>
+    <string name="settings_voice_label">Voice</string>
+    <string name="settings_prompt_label">System instruction (optional)</string>
+    <string name="settings_save">Save &amp; Test</string>
+    <string name="settings_back">Back</string>
+</resources>

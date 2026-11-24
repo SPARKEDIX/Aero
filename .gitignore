@@ -1,0 +1,27 @@
+# Gradle
+.gradle/
+build/
+.kotlin/
+
+# Local machine config (SDK path + signing credentials)
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+captures/
+
+# Signing material — never commit
+*.jks
+*.keystore
+release.jks
+
+# Build outputs
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# OS
+.DS_Store
+Thumbs.db
