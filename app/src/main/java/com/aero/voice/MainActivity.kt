@@ -115,8 +115,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             if (result.resultCode == RESULT_OK && result.data != null) {
                 screenManager.start(result.resultCode, result.data!!)
                 miniOrb.visibility = View.VISIBLE
-                startFloatingOrb()
-                searchScope.launch { Mirage.load(this@MainActivity) }
+                Log.d("AeroScreen", "UI: stream started, mini orb shown")
             }
         }
 
@@ -149,6 +148,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         }
 
         screenManager.onFrame = { jpeg, frameNo ->
+            if (!Mirage.isReady) searchScope.launch { Mirage.load(this@MainActivity) }
             handler.post {
                 miniOrbView.micBoost = AeroState.micBoost
                 miniOrbView.aiBoost = AeroState.aiBoost
@@ -183,18 +183,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
         // Expanded actions (visible only while the mic session is live).
         findViewById<ImageButton>(R.id.screenShareButton).setOnClickListener {
-            if (Settings.canDrawOverlays(this)) {
-                startFloatingOrb()
-                launchScreenPicker()
-            } else {
-                pendingScreenShare = true
-                overlayPermissionLauncher.launch(
-                    Intent(
-                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        android.net.Uri.parse("package:$packageName")
-                    )
-                )
-            }
+            launchScreenPicker()
         }
         findViewById<ImageButton>(R.id.liveButton).setOnClickListener {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
