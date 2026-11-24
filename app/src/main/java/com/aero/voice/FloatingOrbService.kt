@@ -170,7 +170,11 @@ class FloatingOrbService : Service() {
         }
 
         root.findViewById<ImageButton>(R.id.overlayClose).setOnClickListener {
-            Log.d(TAG, "close clicked")
+            Log.d(TAG, "close clicked — full exit")
+            // End the background voice session completely (stop listening &
+            // speaking) and close the orb. The session service cleans up
+            // AeroState and KeepAliveService on destroy.
+            stopService(Intent(this, BackgroundSessionService::class.java))
             stopSelf()
         }
 

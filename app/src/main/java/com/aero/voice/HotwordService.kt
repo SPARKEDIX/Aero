@@ -17,8 +17,6 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
 import androidx.core.app.ServiceCompat
-import java.util.Locale
-
 /**
  * Always-on background hotword listener.
  *
@@ -90,12 +88,17 @@ class HotwordService : Service() {
                     recognizing = false
                     sr.destroy()
                     if (recognizer === sr) recognizer = null
-                    val list = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    val text = list?.firstOrNull() ?: ""
-                    Log.d(TAG, "heard: \"$text\"")
-                    if (isWakePhrase(text)) {
-                        Log.d(TAG, "WAKE WORD DETECTED")
-                        onWake()
+                    val list = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION) ?: emptyList()
+                    if (list.isEmpty()) {
+                        Log.w(TAG, "empty recognition result")
+                    } else {
+                        Log.d(TAG, "heard: ${list.joinToString(" | ")}")
+                        // Check every candidate, not just the top one.
+                        val wake = list.any { isWakePhrase(it) }
+                        if (wake) {
+                            Log.d(TAG, "WAKE WORD DETECTED")
+                            onWake()
+                        }
                     }
                     handler.postDelayed({ if (!destroyed) startListening() }, 500L)
                 }
@@ -107,7 +110,10 @@ class HotwordService : Service() {
                     RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                     RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
                 )
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().language)
+                // Force English recognition: wake words like "hey aero" are
+                // most reliably transcribed in English on most devices.
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US")
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "en-US")
                 putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
@@ -143,9 +149,16 @@ class HotwordService : Service() {
     }
 
     private fun isWakePhrase(text: String): Boolean {
-        val t = text.trim().lowercase()
-        val wake = Regex("(\\bhey\\b|\\bok\\b|o\\s*k)\\s+aero\\b")
-        return wake.containsMatchIn(t)
+        // Normalize: lowercase, strip everything except letters/spaces.
+        val t = text.lowercase()
+            .replace(Regex("[^a-z ]"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+        if (t.length < 4) return false
+        // Accept common phonetic variants users say: "hey aero", "hero aero",
+        // "ok aero", "airo", "ayro", "ero", "hero", "auro" …
+        val variants = listOf("aero", "airo", "ayro", "ero", "hero", "auro", "eyro", "eero")
+        return variants.any { t.contains(it) }
     }
 
     private fun onWake() {
