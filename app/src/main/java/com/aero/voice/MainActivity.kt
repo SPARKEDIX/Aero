@@ -235,6 +235,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         handler.post {
             micOpen = true
             orbView.micBoost = 0f
+            orbView.onAiTurnEnd()
         }
     }
 

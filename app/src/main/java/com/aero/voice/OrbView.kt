@@ -95,6 +95,15 @@ class OrbView @JvmOverloads constructor(
         aiLevel = level.coerceIn(0f, 1f)
         lastAiAudioMs = SystemClock.elapsedRealtime()
         aiBoost = 0.5f + 0.5f * aiLevel
+        // Instant onset: the very first chunk must already make the ball shake.
+        // No slow ramp from zero.
+        if (aiSmooth < 0.90f) aiSmooth = 0.90f
+    }
+
+    /** Called when the assistant's turn finishes — stop the vibration right away. */
+    fun onAiTurnEnd() {
+        lastAiAudioMs = 0L
+        aiLevel = 0f
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -343,7 +352,7 @@ class OrbView @JvmOverloads constructor(
 
     companion object {
         /** Keep the AI vibration alive between audio chunks. */
-        private const val AI_HOLD_MS = 700L
+        private const val AI_HOLD_MS = 1500L
 
         /**
          * AGSL: blue-violet sphere with soft, always-flowing smoke.
