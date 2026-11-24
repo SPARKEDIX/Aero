@@ -54,6 +54,13 @@
             android:name=".SettingsActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".ScreenShareConsentActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.AeroVoice.Transparent" />
     </application>
 
 </manifest>

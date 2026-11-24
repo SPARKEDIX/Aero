@@ -150,15 +150,12 @@ class FloatingOrbService : Service() {
                 // orb stays so the user can keep using the assistant.
                 stopService(Intent(this, ScreenShareService::class.java))
             } else {
-                // Share is OFF → (re)start it. Android 14+ requires a fresh
-                // system consent dialog, which must be requested from an
-                // activity, so open Aero with a special action.
-                val intent = Intent(this, MainActivity::class.java).apply {
-                    action = MainActivity.ACTION_START_SCREEN
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_SINGLE_TOP
-                    )
+                // Share is OFF → (re)start it via an INVISIBLE trampoline
+                // activity. The main app never comes to the front — the user
+                // only sees the system consent dialog, and on accept we return
+                // straight back to the background.
+                val intent = Intent(this, ScreenShareConsentActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 startActivity(intent)
             }

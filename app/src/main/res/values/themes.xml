@@ -11,6 +11,16 @@
         <item name="android:textColorPrimary">@color/text_primary</item>
     </style>
 
+    <!-- Fully invisible host for the screen-share consent dialog. -->
+    <style name="Theme.AeroVoice.Transparent" parent="Theme.AeroVoice">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+
     <style name="ShapeAppearance.AeroVoice.Circle" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">50%</item>
