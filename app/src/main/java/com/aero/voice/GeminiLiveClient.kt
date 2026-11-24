@@ -213,6 +213,7 @@ class GeminiLiveClient(
             })
         }
         ws?.send(msg.toString())
+        Log.d(TAG, "video frame sent: ${jpeg.size} bytes")
     }
 
     /** Sends OCR / document text into the live conversation as a user turn. */

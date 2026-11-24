@@ -485,14 +485,11 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     private fun bindCamera() {
         val provider = cameraProvider ?: return
         try {
-            val preview = Preview.Builder()
-                .setTargetResolution(android.util.Size(320, 240))
-                .build()
+            val preview = Preview.Builder().build()
             preview.setSurfaceProvider(previewView.surfaceProvider)
 
             val capture = ImageCapture.Builder()
                 .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                .setTargetResolution(android.util.Size(320, 240))
                 .build()
             imageCapture = capture
 
@@ -505,16 +502,21 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     }
 
     private fun captureFrame() {
-        val capture = imageCapture ?: return
+        val capture = imageCapture
+        Log.d("AeroCamera", "captureFrame called, capture=$capture")
+        if (capture == null) return
         try {
             capture.takePicture(
                 ContextCompat.getMainExecutor(this),
                 object : ImageCapture.OnImageCapturedCallback() {
                     override fun onCaptureSuccess(image: ImageProxy) {
+                        Log.d("AeroCamera", "frame captured ${image.width}x${image.height} fmt=${image.format}")
                         try {
-                            val bitmap = yuvToBitmap(image)
+                            val bitmap = frameToBitmap(image)
+                            val scaled = scaleDown(bitmap, 640)
                             val baos = java.io.ByteArrayOutputStream()
-                            bitmap.compress(Bitmap.CompressFormat.JPEG, 65, baos)
+                            scaled.compress(Bitmap.CompressFormat.JPEG, 60, baos)
+                            if (scaled !== bitmap) scaled.recycle()
                             bitmap.recycle()
                             client?.sendImage(baos.toByteArray())
                         } catch (t: Throwable) {
@@ -569,6 +571,30 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                 .setInterpolator(OvershootInterpolator(1.1f))
                 .start()
         }
+    }
+
+    /** CameraX frame -> bitmap. Handles both JPEG (single plane) and YUV_420_888. */
+    private fun scaleDown(source: Bitmap, maxSide: Int): Bitmap {
+        if (maxOf(source.width, source.height) <= maxSide) return source
+        val scale = maxSide.toFloat() / maxOf(source.width, source.height)
+        return Bitmap.createScaledBitmap(
+            source,
+            (source.width * scale).toInt().coerceAtLeast(1),
+            (source.height * scale).toInt().coerceAtLeast(1),
+            true
+        )
+    }
+
+    /** CameraX frame -> bitmap. Handles both JPEG (single plane) and YUV_420_888. */
+    private fun frameToBitmap(image: ImageProxy): Bitmap {
+        if (image.format == android.graphics.ImageFormat.JPEG || image.planes.size < 3) {
+            val buffer = image.planes[0].buffer
+            val bytes = ByteArray(buffer.remaining())
+            buffer.get(bytes)
+            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            return bitmap
+        }
+        return yuvToBitmap(image)
     }
 
     /** CameraX YUV_420_888 frame -> RGB bitmap for the on-device model. */
@@ -634,8 +660,10 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                 if (image != null) {
                     val bitmap = imageToBitmap(image)
                     image.close()
+                    val scaled = scaleDown(bitmap, 640)
                     val baos = java.io.ByteArrayOutputStream()
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 65, baos)
+                    scaled.compress(Bitmap.CompressFormat.JPEG, 60, baos)
+                    if (scaled !== bitmap) scaled.recycle()
                     bitmap.recycle()
                     client?.sendImage(baos.toByteArray())
                 }
