@@ -62,6 +62,8 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     private val cameraFlipButton by lazy { findViewById<ImageButton>(R.id.cameraFlipButton) }
     private val actionsRow by lazy { findViewById<View>(R.id.actionsRow) }
     private val settingsButton by lazy { findViewById<ImageView>(R.id.settingsButton) }
+    private val miniOrb by lazy { findViewById<View>(R.id.miniOrb) }
+    private val miniOrbView by lazy { findViewById<OrbView>(R.id.miniOrbView) }
 
     private var micMuted = false
     private var lensFacing = CameraSelector.LENS_FACING_BACK
@@ -269,6 +271,8 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     private fun stopProjection() {
         handler.removeCallbacks(screenCaptureRunnable)
+        handler.removeCallbacks(miniOrbPump)
+        miniOrb.visibility = View.GONE
         try {
             screenDisplay?.release()
             screenProjection?.stop()
@@ -779,28 +783,38 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         return bitmap
     }
 
+    private fun captureScreenFrame() {
+        val reader = screenReader ?: return
+        val image = reader.acquireLatestImage() ?: return
+        try {
+            val bitmap = imageToBitmap(image)
+            val scaled = scaleDown(bitmap, 640)
+            val baos = java.io.ByteArrayOutputStream()
+            scaled.compress(Bitmap.CompressFormat.JPEG, 60, baos)
+            if (scaled !== bitmap) scaled.recycle()
+            bitmap.recycle()
+            client?.sendImage(baos.toByteArray())
+            Log.d("AeroScreen", "frame sent: ${baos.size()} bytes")
+        } catch (t: Throwable) {
+            Log.e("AeroScreen", "frame failed", t)
+        } finally {
+            image.close()
+        }
+    }
+
     private val screenCaptureRunnable = object : Runnable {
         override fun run() {
-            val reader = screenReader ?: return
-            val image = reader.acquireLatestImage()
-            if (image == null) {
-                handler.postDelayed(this, 4000L)
-                return
-            }
-            try {
-                val bitmap = imageToBitmap(image)
-                val scaled = scaleDown(bitmap, 640)
-                val baos = java.io.ByteArrayOutputStream()
-                scaled.compress(Bitmap.CompressFormat.JPEG, 60, baos)
-                if (scaled !== bitmap) scaled.recycle()
-                bitmap.recycle()
-                client?.sendImage(baos.toByteArray())
-            } catch (t: Throwable) {
-                Log.e("AeroScreen", "frame failed", t)
-            } finally {
-                image.close()
-            }
+            captureScreenFrame()
             handler.postDelayed(this, 4000L)
+        }
+    }
+
+    private val miniOrbPump = object : Runnable {
+        override fun run() {
+            if (screenProjection == null) return
+            miniOrbView.micBoost = AeroState.micBoost
+            miniOrbView.aiBoost = AeroState.aiBoost
+            handler.postDelayed(this, 80L)
         }
     }
 
@@ -822,7 +836,10 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             screenDisplay = display
             // Show the floating orb immediately — it must appear with the share.
             startFloatingOrb()
-            handler.postDelayed(screenCaptureRunnable, 800L)
+            miniOrb.visibility = View.VISIBLE
+            handler.post(miniOrbPump)
+            captureScreenFrame()
+            handler.postDelayed(screenCaptureRunnable, 4000L)
             // App intentionally stays alive so mic + Gemini voice keep working;
             // the floating orb gives the same "outside the app" experience.
         } catch (t: Throwable) {

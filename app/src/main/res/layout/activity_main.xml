@@ -114,6 +114,21 @@
 
         </LinearLayout>
     </LinearLayout>
+    <!-- Mini orb visible inside the app while screen sharing -->
+    <FrameLayout
+        android:id="@+id/miniOrb"
+        android:layout_width="96dp"
+        android:layout_height="96dp"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="12dp"
+        android:visibility="gone">
+
+        <com.aero.voice.OrbView
+            android:id="@+id/miniOrbView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </FrameLayout>
+
     <!-- Live camera window: replaces the orb while sharing -->
     <FrameLayout
         android:id="@+id/cameraWindow"
