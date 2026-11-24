@@ -7,10 +7,8 @@ import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.pdf.PdfRenderer
-import android.media.Image
-import android.media.ImageReader
-import android.media.projection.MediaProjectionManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -32,6 +30,7 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import android.media.projection.MediaProjectionManager
 import com.aero.voice.search.SearchOrchestrator
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.CoroutineScope
@@ -113,10 +112,20 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     private val screenPicker =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK && result.data != null) {
-                Log.d("AeroScreen", "consent OK, starting stream")
-                screenManager.start(result.resultCode, result.data!!)
+                Log.d("AeroScreen", "consent OK, starting projection service")
+                // Android 14+ requires the MediaProjection to live inside a
+                // foreground service of type mediaProjection. Pass the consent
+                // result to FloatingOrbService, which owns capture + overlay.
+                val intent = Intent(this, FloatingOrbService::class.java).apply {
+                    putExtra(FloatingOrbService.EXTRA_CODE, result.resultCode)
+                    putExtra(FloatingOrbService.EXTRA_DATA, result.data)
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(intent)
+                } else {
+                    startService(intent)
+                }
                 miniOrb.visibility = View.VISIBLE
-                Log.d("AeroScreen", "UI: stream started, mini orb shown")
             } else {
                 Log.w("AeroScreen", "consent cancelled result=${result.resultCode}")
             }
@@ -135,8 +144,6 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     private var pendingScreenShare = false
 
-    private val screenManager by lazy { ScreenShareManager(this) }
-
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* silent */ }
 
@@ -148,30 +155,6 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
         findViewById<ImageView>(R.id.settingsButton).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
-        }
-
-        screenManager.onFrame = { jpeg, frameNo ->
-            if (!Mirage.isReady) searchScope.launch { Mirage.load(this@MainActivity) }
-            handler.post {
-                miniOrbView.micBoost = AeroState.micBoost
-                miniOrbView.aiBoost = AeroState.aiBoost
-            }
-            client?.sendImage(jpeg)
-            if (Mirage.isReady && frameNo % 3 == 0) {
-                try {
-                    val bmp = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size)
-                    val text = Mirage.describe(bmp)
-                    bmp.recycle()
-                    if (text.isNotBlank()) client?.sendContextText("Screen content: $text")
-                } catch (_: Exception) {
-                }
-            }
-        }
-        screenManager.onStopped = {
-            handler.post {
-                miniOrb.visibility = View.GONE
-                stopFloatingOrb()
-            }
         }
 
         micButton.setOnClickListener {
@@ -288,14 +271,14 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     }
 
     private fun stopProjection() {
-        screenManager.stop()
+        stopFloatingOrb() // stops MediaProjectionHolder + removes overlay
         miniOrb.visibility = View.GONE
     }
 
     override fun onStop() {
         super.onStop()
         // Minimizing while sharing keeps the voice alive and shows the orb.
-        if (sessionActive && screenManager.isRunning) startFloatingOrb()
+        if (sessionActive && MediaProjectionHolder.isRunning) startFloatingOrb()
     }
 
     private fun startSession() {
@@ -314,6 +297,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         sessionActive = true
         AeroState.sessionActive = true
         AeroState.micMuted = false
+        AeroState.liveClient = client
         KeepAliveService.start(this)
         setMicActiveUI(true)
         handler.post(drainRunnable)
@@ -335,6 +319,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         AeroState.micBoost = 0f
         AeroState.aiBoost = 0f
         AeroState.micMuted = false
+        AeroState.liveClient = null
         KeepAliveService.stop(this)
         closeCameraLive()
         handler.removeCallbacks(drainRunnable)

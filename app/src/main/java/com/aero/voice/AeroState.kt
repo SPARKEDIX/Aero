@@ -13,4 +13,8 @@ object AeroState {
 
     @Volatile
     var sessionActive = false
+
+    /** Set while a voice session runs, so the floating service can send frames. */
+    @Volatile
+    var liveClient: GeminiLiveClient? = null
 }

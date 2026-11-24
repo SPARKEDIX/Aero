@@ -35,6 +35,20 @@ class FloatingOrbService : Service() {
     private var initialX = 0
     private var initialY = 0
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val code = intent?.getIntExtra(EXTRA_CODE, -1) ?: -1
+        val data = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent?.getParcelableExtra(EXTRA_DATA, Intent::class.java)
+        } else {
+            @Suppress("DEPRECATION") intent?.getParcelableExtra(EXTRA_DATA)
+        }
+        if (code != -1 && data != null) {
+            MediaProjectionHolder.start(this, code, data)
+            android.util.Log.d("AeroOverlay", "media projection session started in service")
+        }
+        return START_STICKY
+    }
+
     override fun onBind(intent: Intent?): Nothing? = null
 
     override fun onCreate() {
@@ -235,6 +249,7 @@ class FloatingOrbService : Service() {
 
     override fun onDestroy() {
         handler.removeCallbacks(boostPump)
+        MediaProjectionHolder.stop()
         if (::root.isInitialized) {
             try {
                 windowManager.removeView(root)
@@ -248,6 +263,8 @@ class FloatingOrbService : Service() {
         const val ACTION_OPEN_FILES = "com.aero.voice.OPEN_FILES"
         const val ACTION_OPEN_CAMERA = "com.aero.voice.OPEN_CAMERA"
         const val ACTION_STOP_SCREEN = "com.aero.voice.STOP_SCREEN"
+        const val EXTRA_CODE = "media_projection_code"
+        const val EXTRA_DATA = "media_projection_data"
         private const val NOTIFICATION_ID = 77
     }
 }
