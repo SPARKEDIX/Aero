@@ -56,6 +56,9 @@ class GeminiLiveClient(
         private val INTERNET_INSTRUCTIONS = AeroIdentity.TEXT + """
 
             You can access the live internet with the `web_search` tool.
+            You also receive live camera and screen-share images as video frames —
+            you can see them, so answer questions about what is visible instead of
+            saying you cannot see.
             Use it whenever the user asks about news, current events, weather, prices, sports,
             or any fact that may have changed recently. Call the tool before answering such
             questions and never claim you cannot access the internet.
@@ -195,6 +198,31 @@ class GeminiLiveClient(
         ws?.send(msg.toString())
         sentChunks++
         if (sentChunks % 20 == 1) Log.d(TAG, "sent audio chunks: $sentChunks")
+    }
+
+    /** Sends a JPEG frame straight into the live conversation (Gemini vision). */
+    fun sendImage(jpeg: ByteArray) {
+        if (jpeg.isEmpty()) return
+        val b64 = Base64.encodeToString(jpeg, Base64.NO_WRAP)
+        val msg = JSONObject().apply {
+            put("realtimeInput", JSONObject().apply {
+                put("video", JSONObject().apply {
+                    put("data", b64)
+                    put("mimeType", "image/jpeg")
+                })
+            })
+        }
+        ws?.send(msg.toString())
+    }
+
+    /** Sends OCR / document text into the live conversation as a user turn. */
+    fun sendContextText(text: String) {
+        if (text.isBlank()) return
+        val msg = JSONObject().apply {
+            put("realtimeInput", JSONObject().put("text", text))
+        }
+        Log.d(TAG, "context text sent: ${text.take(160)}")
+        ws?.send(msg.toString())
     }
 
     private fun handleJson(text: String) {

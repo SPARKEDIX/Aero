@@ -1,0 +1,5 @@
+# ninja log v5
+1	11243	8172151646455099	CMakeFiles/aero_mirage.dir/mirage_jni.cpp.o	1c9e9468f14abe20
+11255	11487	8172151648825601	C:/Users/Kartik/Desktop/Aero/VoiceAssistant/app/build/intermediates/cxx/RelWithDebInfo/3u675i2y/obj/arm64-v8a/libaero_mirage.so	d47964ce1257288a
+35	3971	8172167954515859	CMakeFiles/aero_mirage.dir/mirage_jni.cpp.o	1c9e9468f14abe20
+3975	4697	8172167961844688	C:/Users/Kartik/Desktop/Aero/VoiceAssistant/app/build/intermediates/cxx/RelWithDebInfo/3u675i2y/obj/arm64-v8a/libaero_mirage.so	d47964ce1257288a

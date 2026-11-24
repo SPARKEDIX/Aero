@@ -1,0 +1,3 @@
+C:/Users/Kartik/Desktop/Aero/VoiceAssistant/app/.cxx/RelWithDebInfo/3u675i2y/arm64-v8a/CMakeFiles/aero_mirage.dir
+C:/Users/Kartik/Desktop/Aero/VoiceAssistant/app/.cxx/RelWithDebInfo/3u675i2y/arm64-v8a/CMakeFiles/edit_cache.dir
+C:/Users/Kartik/Desktop/Aero/VoiceAssistant/app/.cxx/RelWithDebInfo/3u675i2y/arm64-v8a/CMakeFiles/rebuild_cache.dir

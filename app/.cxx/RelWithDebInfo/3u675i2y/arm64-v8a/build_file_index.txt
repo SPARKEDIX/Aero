@@ -1,0 +1,1 @@
+C:\Users\Kartik\Desktop\Aero\VoiceAssistant\app\src\main\cpp\CMakeLists.txt

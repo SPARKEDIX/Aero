@@ -3,6 +3,11 @@
     <string name="app_name">Aero Voice</string>
     <string name="settings_desc">Settings</string>
     <string name="mic_desc">Talk</string>
+    <string name="screen_share_desc">Share screen</string>
+    <string name="live_desc">Live camera</string>
+    <string name="flip_desc">Flip camera</string>
+    <string name="mute_desc">Mute or unmute</string>
+    <string name="attach_desc">Attach a document</string>
     <string name="status_ready">Tap the mic to start talking</string>
     <string name="status_need_key">Set up your Google API key first</string>
     <string name="status_connecting">Connecting…</string>

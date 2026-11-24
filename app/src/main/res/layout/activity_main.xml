@@ -12,7 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Single settings button (top-right sliders pill) -->
+    <!-- Single settings button -->
     <ImageView
         android:id="@+id/settingsButton"
         android:layout_width="56dp"
@@ -25,17 +25,139 @@
         android:padding="16dp"
         android:contentDescription="@string/settings_desc" />
 
-    <!-- Circular mic, bottom center -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/micButton"
-        android:layout_width="64dp"
-        android:layout_height="64dp"
+    <!-- Mic + animated side actions -->
+    <LinearLayout
+        android:id="@+id/actionsRow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
         android:layout_marginBottom="56dp"
-        android:elevation="10dp"
-        app:shapeAppearanceOverlay="@style/ShapeAppearance.AeroVoice.Circle"
-        app:backgroundTint="@color/bg_circle"
-        app:tint="@color/text_dark"
-        app:srcCompat="@drawable/ic_mic"
-        android:contentDescription="@string/mic_desc" />
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:id="@+id/leftActions"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            android:scaleX="0"
+            android:scaleY="0">
+
+            <ImageButton
+                android:id="@+id/screenShareButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_margin="6dp"
+                android:background="@drawable/bg_circle_white"
+                android:elevation="4dp"
+                android:src="@drawable/ic_screen_share"
+                android:contentDescription="@string/screen_share_desc" />
+
+            <ImageButton
+                android:id="@+id/liveButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_margin="6dp"
+                android:background="@drawable/bg_circle_white"
+                android:elevation="4dp"
+                android:src="@drawable/ic_video"
+                android:contentDescription="@string/live_desc" />
+
+            <!-- flip button lives inside the camera window (top-left) -->
+        </LinearLayout>
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/micButton"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            android:elevation="8dp"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.AeroVoice.Circle"
+            app:backgroundTint="@color/bg_circle"
+            app:tint="@color/text_dark"
+            app:srcCompat="@drawable/ic_mic"
+            app:fabCustomSize="64dp"
+            app:maxImageSize="26dp"
+            android:contentDescription="@string/mic_desc" />
+
+        <LinearLayout
+            android:id="@+id/rightActions"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            android:scaleX="0"
+            android:scaleY="0">
+
+            <ImageButton
+                android:id="@+id/muteButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_margin="6dp"
+                android:background="@drawable/bg_circle_white"
+                android:elevation="4dp"
+                android:src="@drawable/ic_mic"
+                android:contentDescription="@string/mute_desc" />
+
+            <ImageButton
+                android:id="@+id/attachButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_margin="6dp"
+                android:background="@drawable/bg_circle_white"
+                android:elevation="4dp"
+                android:src="@drawable/ic_plus"
+                android:contentDescription="@string/attach_desc" />
+
+            <!-- Balances the 3 left buttons so the mic stays exactly centred -->
+            <View
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_margin="6dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Live camera window: replaces the orb while sharing -->
+    <FrameLayout
+        android:id="@+id/cameraWindow"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_margin="48dp"
+        android:layout_marginBottom="150dp"
+        android:background="@drawable/bg_camera_window"
+        android:clipToOutline="true"
+        android:outlineProvider="background"
+        android:scaleX="0"
+        android:scaleY="0"
+        android:visibility="gone">
+
+        <androidx.camera.view.PreviewView
+            android:id="@+id/previewView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <ImageButton
+            android:id="@+id/cameraFlipButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="top|start"
+            android:layout_margin="12dp"
+            android:background="@drawable/bg_circle_white"
+            android:elevation="4dp"
+            android:src="@drawable/ic_flip"
+            android:contentDescription="@string/flip_desc" />
+
+        <ImageButton
+            android:id="@+id/cameraCloseButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="top|end"
+            android:layout_margin="12dp"
+            android:background="@drawable/bg_circle_white"
+            android:elevation="4dp"
+            android:src="@drawable/ic_stop"
+            android:contentDescription="@string/live_desc" />
+    </FrameLayout>
 </FrameLayout>

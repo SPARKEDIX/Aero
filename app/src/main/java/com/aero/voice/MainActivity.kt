@@ -4,14 +4,32 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.pdf.PdfRenderer
+import android.media.Image
+import android.media.ImageReader
+import android.media.projection.MediaProjectionManager
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import android.view.View
+import android.view.animation.OvershootInterpolator
+import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import com.aero.voice.search.SearchOrchestrator
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -35,6 +53,20 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     private val micButton by lazy { findViewById<FloatingActionButton>(R.id.micButton) }
     private val orbView by lazy { findViewById<OrbView>(R.id.orbView) }
+    private val leftActions by lazy { findViewById<LinearLayout>(R.id.leftActions) }
+    private val rightActions by lazy { findViewById<LinearLayout>(R.id.rightActions) }
+    private val muteButton by lazy { findViewById<ImageButton>(R.id.muteButton) }
+    private val cameraWindow by lazy { findViewById<View>(R.id.cameraWindow) }
+    private val previewView by lazy { findViewById<PreviewView>(R.id.previewView) }
+    private val cameraFlipButton by lazy { findViewById<ImageButton>(R.id.cameraFlipButton) }
+    private val actionsRow by lazy { findViewById<View>(R.id.actionsRow) }
+    private val settingsButton by lazy { findViewById<ImageView>(R.id.settingsButton) }
+
+    private var micMuted = false
+    private var lensFacing = CameraSelector.LENS_FACING_BACK
+    private var cameraLive = false
+    private var cameraProvider: ProcessCameraProvider? = null
+    private var imageCapture: ImageCapture? = null
 
     private var client: GeminiLiveClient? = null
     private var recorder: AudioRecorder? = null
@@ -65,6 +97,23 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         }
     }
 
+    private val cameraPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) toggleCameraLive()
+        }
+
+    private val docPicker =
+        registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+            uris?.forEach { handleDocument(it) }
+        }
+
+    private val screenPicker =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK && result.data != null) {
+                captureScreen(result.resultCode, result.data!!)
+            }
+        }
+
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* silent */ }
 
@@ -80,6 +129,47 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
         micButton.setOnClickListener {
             if (sessionActive) stopSession() else startSession()
+        }
+
+        // Expanded actions (visible only while the mic session is live).
+        findViewById<ImageButton>(R.id.screenShareButton).setOnClickListener {
+            val mgr = getSystemService(MediaProjectionManager::class.java)
+            screenPicker.launch(mgr.createScreenCaptureIntent())
+        }
+        findViewById<ImageButton>(R.id.liveButton).setOnClickListener {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED
+            ) {
+                toggleCameraLive()
+            } else {
+                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+        }
+        cameraFlipButton.setOnClickListener {
+            lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
+                CameraSelector.LENS_FACING_FRONT
+            } else {
+                CameraSelector.LENS_FACING_BACK
+            }
+            bindCamera()
+        }
+        findViewById<ImageButton>(R.id.cameraCloseButton).setOnClickListener {
+            toggleCameraLive()
+        }
+        muteButton.setOnClickListener {
+            micMuted = !micMuted
+            muteButton.setImageResource(if (micMuted) R.drawable.ic_mic_off else R.drawable.ic_mic)
+        }
+        findViewById<ImageButton>(R.id.attachButton).setOnClickListener {
+            docPicker.launch(
+                arrayOf(
+                    "application/pdf",
+                    "image/*",
+                    "text/plain",
+                    "application/msword",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+            )
         }
 
         if (Prefs.apiKey(this) == null) {
@@ -123,6 +213,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     private fun stopSession() {
         sessionActive = false
+        closeCameraLive()
         handler.removeCallbacks(drainRunnable)
         pendingResponses.clear()
         toolJobs.values.toSet().forEach { it.cancel() }
@@ -150,9 +241,32 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         micButton.imageTintList = ColorStateList.valueOf(
             if (active) android.graphics.Color.WHITE else getColor(R.color.text_dark)
         )
+        setActionsExpanded(active)
         if (active) {
+            micMuted = false
+            muteButton.setImageResource(R.drawable.ic_mic)
             orbView.micBoost = 0f
             orbView.aiBoost = 0f
+        }
+    }
+
+    /** Side buttons fly out of the mic when a session starts, and back in when it ends. */
+    private fun setActionsExpanded(expanded: Boolean) {
+        for (group in listOf(leftActions, rightActions)) {
+            if (expanded) {
+                group.visibility = View.VISIBLE
+                group.animate()
+                    .scaleX(1f).scaleY(1f)
+                    .setDuration(260)
+                    .setInterpolator(OvershootInterpolator(1.2f))
+                    .start()
+            } else {
+                group.animate()
+                    .scaleX(0f).scaleY(0f)
+                    .setDuration(160)
+                    .withEndAction { group.visibility = View.GONE }
+                    .start()
+            }
         }
     }
 
@@ -204,7 +318,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                     if (!micOpen) return@AudioRecorder
                 }
 
-                client?.sendAudio(chunk)
+                if (!micMuted) client?.sendAudio(chunk)
                 val p = player
                 if (p != null && now - lastFlushAt > 400) {
                     lastFlushAt = now
@@ -324,6 +438,282 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                 "${now - lastAssistantAudioAt} ms of silence"
         )
         client?.sendToolResponses(batch.responses)
+    }
+
+    // ---- Camera / screen / document vision (on-device Mirage OCR) ----
+
+    private fun toggleCameraLive() {
+        if (cameraLive) closeCameraLive() else openCameraLive()
+    }
+
+    private fun openCameraLive() {
+        if (cameraLive) return
+        cameraLive = true
+        animateCameraWindow(true)
+        val future = ProcessCameraProvider.getInstance(this)
+        future.addListener({
+            try {
+                cameraProvider = future.get()
+                bindCamera()
+                captureFrame()
+                handler.post(captureRunnable)
+            } catch (t: Throwable) {
+                Log.e("AeroCamera", "setup failed", t)
+            }
+        }, ContextCompat.getMainExecutor(this))
+    }
+
+    private fun closeCameraLive() {
+        if (!cameraLive) return
+        cameraLive = false
+        handler.removeCallbacks(captureRunnable)
+        try {
+            cameraProvider?.unbindAll()
+        } catch (_: Exception) {
+        }
+        animateCameraWindow(false)
+    }
+
+    private val captureRunnable = object : Runnable {
+        override fun run() {
+            if (!cameraLive) return
+            captureFrame()
+            handler.postDelayed(this, 6_000L)
+        }
+    }
+
+    private fun bindCamera() {
+        val provider = cameraProvider ?: return
+        try {
+            val preview = Preview.Builder()
+                .setTargetResolution(android.util.Size(320, 240))
+                .build()
+            preview.setSurfaceProvider(previewView.surfaceProvider)
+
+            val capture = ImageCapture.Builder()
+                .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                .setTargetResolution(android.util.Size(320, 240))
+                .build()
+            imageCapture = capture
+
+            val selector = CameraSelector.Builder().requireLensFacing(lensFacing).build()
+            provider.unbindAll()
+            provider.bindToLifecycle(this, selector, preview, capture)
+        } catch (t: Throwable) {
+            Log.e("AeroCamera", "bind failed", t)
+        }
+    }
+
+    private fun captureFrame() {
+        val capture = imageCapture ?: return
+        try {
+            capture.takePicture(
+                ContextCompat.getMainExecutor(this),
+                object : ImageCapture.OnImageCapturedCallback() {
+                    override fun onCaptureSuccess(image: ImageProxy) {
+                        try {
+                            val bitmap = yuvToBitmap(image)
+                            val baos = java.io.ByteArrayOutputStream()
+                            bitmap.compress(Bitmap.CompressFormat.JPEG, 65, baos)
+                            bitmap.recycle()
+                            client?.sendImage(baos.toByteArray())
+                        } catch (t: Throwable) {
+                            Log.e("AeroCamera", "frame encode failed", t)
+                        } finally {
+                            image.close()
+                        }
+                    }
+
+                    override fun onError(exception: ImageCaptureException) {
+                        Log.e("AeroCamera", "frame failed", exception)
+                    }
+                }
+            )
+        } catch (t: Throwable) {
+            Log.e("AeroCamera", "capture failed", t)
+        }
+    }
+
+    /** Orb shrinks away and the rounded camera window pops in — and reverses. */
+    private fun animateCameraWindow(open: Boolean) {
+        if (open) {
+            orbView.animate()
+                .scaleX(0f).scaleY(0f).alpha(0f)
+                .setDuration(260)
+                .withEndAction { orbView.visibility = View.GONE }
+                .start()
+            actionsRow.animate().alpha(0f).setDuration(180)
+                .withEndAction { actionsRow.visibility = View.GONE }.start()
+            settingsButton.animate().alpha(0f).setDuration(180)
+                .withEndAction { settingsButton.visibility = View.GONE }.start()
+            cameraWindow.visibility = View.VISIBLE
+            cameraWindow.animate()
+                .scaleX(1f).scaleY(1f)
+                .setDuration(300)
+                .setInterpolator(OvershootInterpolator(1.1f))
+                .start()
+        } else {
+            cameraWindow.animate()
+                .scaleX(0f).scaleY(0f)
+                .setDuration(220)
+                .withEndAction { cameraWindow.visibility = View.GONE }
+                .start()
+            actionsRow.visibility = View.VISIBLE
+            actionsRow.animate().alpha(1f).setDuration(220).start()
+            settingsButton.visibility = View.VISIBLE
+            settingsButton.animate().alpha(1f).setDuration(220).start()
+            orbView.visibility = View.VISIBLE
+            orbView.animate()
+                .scaleX(1f).scaleY(1f).alpha(1f)
+                .setDuration(320)
+                .setInterpolator(OvershootInterpolator(1.1f))
+                .start()
+        }
+    }
+
+    /** CameraX YUV_420_888 frame -> RGB bitmap for the on-device model. */
+    private fun yuvToBitmap(image: ImageProxy): Bitmap {
+        val w = image.width
+        val h = image.height
+        val yPlane = image.planes[0]
+        val uPlane = image.planes[1]
+        val vPlane = image.planes[2]
+
+        val yBuf = yPlane.buffer
+        val uBuf = uPlane.buffer
+        val vBuf = vPlane.buffer
+        val yRow = yPlane.rowStride
+        val uRow = uPlane.rowStride
+        val vRow = vPlane.rowStride
+        val yPix = yPlane.pixelStride
+        val uPix = uPlane.pixelStride
+        val vPix = vPlane.pixelStride
+
+        val out = IntArray(w * h)
+        for (j in 0 until h) {
+            val ys = ByteArray(yRow)
+            yBuf.position(j * yRow)
+            yBuf.get(ys)
+            val us = ByteArray(uRow)
+            uBuf.position((j / 2) * uRow)
+            uBuf.get(us)
+            val vs = ByteArray(vRow)
+            vBuf.position((j / 2) * vRow)
+            vBuf.get(vs)
+
+            for (i in 0 until w) {
+                val y = ys[i * yPix].toInt() and 0xFF
+                val u = (us[(i / 2) * uPix].toInt() and 0xFF) - 128
+                val v = (vs[(i / 2) * vPix].toInt() and 0xFF) - 128
+                val r = (y + 1.402 * v).toInt().coerceIn(0, 255)
+                val g = (y - 0.344136 * u - 0.714136 * v).toInt().coerceIn(0, 255)
+                val b = (y + 1.772 * u).toInt().coerceIn(0, 255)
+                out[j * w + i] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+            }
+        }
+        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        bitmap.setPixels(out, 0, w, 0, 0, w, h)
+        return bitmap
+    }
+
+    @Suppress("MissingPermission")
+    private fun captureScreen(code: Int, data: Intent) {
+        try {
+            val manager = getSystemService(MediaProjectionManager::class.java)
+            val projection = manager.getMediaProjection(code, data)
+            val reader = ImageReader.newInstance(
+                480, 800, android.graphics.PixelFormat.RGBA_8888, 2
+            )
+            val display = projection.createVirtualDisplay(
+                "aero-screen", 480, 800, 320,
+                android.hardware.display.DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                reader.surface, null, null
+            )
+            handler.postDelayed({
+                val image = reader.acquireLatestImage()
+                if (image != null) {
+                    val bitmap = imageToBitmap(image)
+                    image.close()
+                    val baos = java.io.ByteArrayOutputStream()
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 65, baos)
+                    bitmap.recycle()
+                    client?.sendImage(baos.toByteArray())
+                }
+                display.release()
+                projection.stop()
+                reader.close()
+            }, 1200L)
+        } catch (t: Throwable) {
+            Log.e("AeroScreen", "capture failed", t)
+        }
+    }
+
+    private fun imageToBitmap(image: Image): Bitmap {
+        val plane = image.planes[0]
+        val w = image.width
+        val h = image.height
+        val rowStride = plane.rowStride
+        val pixelStride = plane.pixelStride
+        val buffer = plane.buffer
+        val row = ByteArray(rowStride)
+        val pixels = IntArray(w * h)
+        for (y in 0 until h) {
+            buffer.position(y * rowStride)
+            buffer.get(row, 0, rowStride)
+            for (x in 0 until w) {
+                val i = x * pixelStride
+                val r = row[i].toInt() and 0xFF
+                val g = row[i + 1].toInt() and 0xFF
+                val b = row[i + 2].toInt() and 0xFF
+                pixels[y * w + x] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+            }
+        }
+        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        bitmap.setPixels(pixels, 0, w, 0, 0, w, h)
+        return bitmap
+    }
+
+    private fun handleDocument(uri: Uri) {
+        searchScope.launch {
+            try {
+                val bitmap: Bitmap
+                if (contentResolver.getType(uri) == "application/pdf") {
+                    val fd = contentResolver.openFileDescriptor(uri, "r") ?: return@launch
+                    val renderer = PdfRenderer(fd)
+                    val page = renderer.openPage(0)
+                    val b = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+                    b.eraseColor(android.graphics.Color.WHITE)
+                    page.render(b, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    bitmap = b
+                    page.close()
+                    renderer.close()
+                    fd.close()
+                } else {
+                    val stream = contentResolver.openInputStream(uri) ?: return@launch
+                    bitmap = BitmapFactory.decodeStream(stream)
+                    stream.close()
+                }
+                analyzeImage(bitmap, "Document")
+            } catch (t: Throwable) {
+                Log.e("AeroDoc", "read failed", t)
+            }
+        }
+    }
+
+    /** Runs the 22 MB on-device Mirage model and feeds the result to the conversation. */
+    private fun analyzeImage(bitmap: Bitmap, label: String) {
+        searchScope.launch {
+            if (!Mirage.load(this@MainActivity)) {
+                Log.e("Mirage", "model not loaded")
+                return@launch
+            }
+            val text = Mirage.describe(bitmap)
+            withContext(Dispatchers.Main) {
+                if (text.isNotBlank()) {
+                    client?.sendContextText("$label analysis: $text")
+                }
+            }
+        }
     }
 
     override fun onError(msg: String) {
