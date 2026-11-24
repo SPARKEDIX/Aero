@@ -858,8 +858,10 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             }
             miniOrb.visibility = View.VISIBLE
             handler.post(miniOrbPump)
-            captureScreenFrame()
-            handler.postDelayed(screenCaptureRunnable, 1000L)
+            handler.postDelayed({
+                captureScreenFrame()
+                handler.postDelayed(screenCaptureRunnable, 1000L)
+            }, 500L)
             // App intentionally stays alive so mic + Gemini voice keep working;
             // the floating orb gives the same "outside the app" experience.
         } catch (t: Throwable) {
@@ -871,25 +873,22 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         val plane = image.planes[0]
         val w = image.width
         val h = image.height
+        val buffer = plane.buffer.apply { rewind() }
+
+        // Canonical MediaProjection -> Bitmap conversion. Handles row padding
+        // and the BGRA byte order used by ARGB_8888 on little-endian devices.
         val rowStride = plane.rowStride
         val pixelStride = plane.pixelStride
-        val buffer = plane.buffer
-        val row = ByteArray(rowStride)
-        val pixels = IntArray(w * h)
-        for (y in 0 until h) {
-            buffer.position(y * rowStride)
-            buffer.get(row, 0, rowStride)
-            for (x in 0 until w) {
-                val i = x * pixelStride
-                val r = row[i].toInt() and 0xFF
-                val g = row[i + 1].toInt() and 0xFF
-                val b = row[i + 2].toInt() and 0xFF
-                pixels[y * w + x] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
-            }
+        val paddedWidth = w + (rowStride - pixelStride * w) / pixelStride
+        val padded = Bitmap.createBitmap(paddedWidth, h, Bitmap.Config.ARGB_8888)
+        padded.copyPixelsFromBuffer(buffer)
+        return if (paddedWidth == w) {
+            padded
+        } else {
+            val cropped = Bitmap.createBitmap(padded, 0, 0, w, h)
+            padded.recycle()
+            cropped
         }
-        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        bitmap.setPixels(pixels, 0, w, 0, 0, w, h)
-        return bitmap
     }
 
     private fun handleDocument(uri: Uri) {
