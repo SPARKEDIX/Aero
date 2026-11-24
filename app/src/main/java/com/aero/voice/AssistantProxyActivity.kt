@@ -18,6 +18,7 @@ class AssistantProxyActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "assistant invoked — starting background session")
+        AeroState.markProxyWake()
 
         // Start (or resume) the invisible voice session and show the orb.
         if (!AeroState.sessionActive) {

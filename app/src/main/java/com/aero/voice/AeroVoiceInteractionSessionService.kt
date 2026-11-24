@@ -14,6 +14,7 @@ class AeroVoiceInteractionSessionService : VoiceInteractionSessionService() {
 
     override fun onNewSession(args: Bundle): VoiceInteractionSession {
         Log.d(TAG, "assistant invoked via system session")
+        AeroState.markProxyWake()
         if (!AeroState.sessionActive) {
             AeroState.sessionActive = true
             try {

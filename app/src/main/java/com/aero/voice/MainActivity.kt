@@ -237,14 +237,6 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         }
 
         // Hotword listening ("Hey Aero") only runs when the user opted in.
-        // The wake-command listener always runs while microphone permission is
-        // granted (it only matches the user's configured phrase).
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-            == PackageManager.PERMISSION_GRANTED
-        ) {
-            HotwordService.start(this)
-        }
-
         // Listen for the floating orb's "close" full-exit broadcast.
         registerReceiver(
             exitReceiver,
@@ -261,8 +253,12 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     override fun onResume() {
         super.onResume()
-        // The floating ball only lives while the app is backgrounded — never
-        // show it (or the in-app mini orb) while the user is inside Aero.
+        // If this resume was caused by the assistant proxy (invisible) wake,
+        // keep the floating orb alive. Otherwise hide it — the orb only lives
+        // while the app is backgrounded.
+        if (AeroState.consumeProxyWake()) {
+            return
+        }
         stopFloatingOrb()
         miniOrb.visibility = View.GONE
         // Settings may have changed the mood while we were away.

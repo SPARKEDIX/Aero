@@ -51,11 +51,6 @@
             android:foregroundServiceType="microphone" />
 
         <service
-            android:name=".HotwordService"
-            android:exported="false"
-            android:foregroundServiceType="microphone" />
-
-        <service
             android:name=".BackgroundSessionService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
@@ -86,6 +81,7 @@
         <activity
             android:name=".AssistantProxyActivity"
             android:exported="true"
+            android:taskAffinity=".assist"
             android:excludeFromRecents="true"
             android:launchMode="singleTask"
             android:noHistory="true"

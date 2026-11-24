@@ -21,4 +21,22 @@ object AeroState {
     /** True once Aero has been granted the system assistant role. */
     @Volatile
     var assistantRoleGranted = false
+
+    /** Wall-clock time (ms) of the last assistant-invoked wake. */
+    @Volatile
+    private var proxyWakeAt = 0L
+
+    fun markProxyWake() {
+        proxyWakeAt = System.currentTimeMillis()
+    }
+
+    /** True once shortly after an assistant wake; clears itself. */
+    fun consumeProxyWake(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - proxyWakeAt < 3000L) {
+            proxyWakeAt = 0L
+            return true
+        }
+        return false
+    }
 }
