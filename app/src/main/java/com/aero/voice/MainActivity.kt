@@ -213,9 +213,9 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     override fun onResume() {
         super.onResume()
-        // In-app there is no floating ball — but keep it during screen-share
-        // startup (the consent dialog briefly resumes this Activity).
-        if (screenProjection == null) stopFloatingOrb()
+        // In-app there is no floating ball — it only lives while the app is
+        // backgrounded. Projection stays alive so voice keeps working.
+        stopFloatingOrb()
         // Settings may have changed the mood while we were away.
         orbView.setMood(Prefs.mood(this))
     }
@@ -280,6 +280,12 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         screenReader = null
     }
 
+    override fun onStop() {
+        super.onStop()
+        // Minimizing while sharing keeps the voice alive and shows the orb.
+        if (sessionActive && screenProjection != null) startFloatingOrb()
+    }
+
     private fun startSession() {
         val key = Prefs.apiKey(this)
         if (key == null) {
@@ -296,6 +302,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         sessionActive = true
         AeroState.sessionActive = true
         AeroState.micMuted = false
+        KeepAliveService.start(this)
         setMicActiveUI(true)
         handler.post(drainRunnable)
 
@@ -316,6 +323,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         AeroState.micBoost = 0f
         AeroState.aiBoost = 0f
         AeroState.micMuted = false
+        KeepAliveService.stop(this)
         closeCameraLive()
         handler.removeCallbacks(drainRunnable)
         pendingResponses.clear()
