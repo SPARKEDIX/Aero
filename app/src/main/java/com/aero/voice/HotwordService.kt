@@ -31,6 +31,7 @@ class HotwordService : Service() {
     private var recognizer: SpeechRecognizer? = null
     private var recognizing = false
     private var destroyed = false
+    private var wakeTriggered = false
 
     private val monitor = object : Runnable {
         override fun run() {
@@ -80,9 +81,10 @@ class HotwordService : Service() {
                 override fun onError(error: Int) {
                     Log.w(TAG, "recognizer error=$error")
                     recognizing = false
+                    wakeTriggered = false
                     sr.destroy()
                     if (recognizer === sr) recognizer = null
-                    handler.postDelayed({ if (!destroyed) startListening() }, 1500L)
+                    handler.postDelayed({ if (!destroyed) startListening() }, 1200L)
                 }
                 override fun onResults(results: Bundle?) {
                     recognizing = false
@@ -93,16 +95,25 @@ class HotwordService : Service() {
                         Log.w(TAG, "empty recognition result")
                     } else {
                         Log.d(TAG, "heard: ${list.joinToString(" | ")}")
-                        // Check every candidate, not just the top one.
-                        val wake = list.any { isWakePhrase(it) }
-                        if (wake) {
-                            Log.d(TAG, "WAKE WORD DETECTED")
+                        if (list.any { isWakePhrase(it) }) {
+                            Log.d(TAG, "WAKE WORD DETECTED (final)")
                             onWake()
                         }
                     }
-                    handler.postDelayed({ if (!destroyed) startListening() }, 500L)
+                    wakeTriggered = false
+                    handler.postDelayed({ if (!destroyed) startListening() }, 400L)
                 }
-                override fun onPartialResults(partialResults: Bundle?) {}
+                override fun onPartialResults(partialResults: Bundle?) {
+                    if (wakeTriggered) return
+                    val partial = partialResults
+                        ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        ?: emptyList()
+                    if (partial.any { isWakePhrase(it) }) {
+                        Log.d(TAG, "WAKE WORD DETECTED (partial): $partial")
+                        wakeTriggered = true
+                        onWake()
+                    }
+                }
                 override fun onEvent(eventType: Int, params: Bundle?) {}
             })
             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -129,6 +140,7 @@ class HotwordService : Service() {
             }
             recognizer = sr
             recognizing = true
+            wakeTriggered = false
             sr.startListening(intent)
         } catch (t: Throwable) {
             Log.e(TAG, "startListening failed", t)
