@@ -782,18 +782,9 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     private val screenCaptureRunnable = object : Runnable {
         override fun run() {
             val reader = screenReader ?: return
-            // Never push frames while the assistant is speaking or the mic is
-            // gated — otherwise every frame starts a new turn and the user's
-            // speech never reaches Gemini (mic looks "off").
-            if (!micOpen || AeroState.micMuted ||
-                SystemClock.elapsedRealtime() - lastAssistantAudioAt < 3000L
-            ) {
-                handler.postDelayed(this, 1000L)
-                return
-            }
             val image = reader.acquireLatestImage()
             if (image == null) {
-                handler.postDelayed(this, 1000L)
+                handler.postDelayed(this, 4000L)
                 return
             }
             try {
@@ -809,7 +800,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             } finally {
                 image.close()
             }
-            handler.postDelayed(this, 6000L)
+            handler.postDelayed(this, 4000L)
         }
     }
 
@@ -829,7 +820,9 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             screenProjection = projection
             screenReader = reader
             screenDisplay = display
-            handler.post(screenCaptureRunnable)
+            // Show the floating orb immediately — it must appear with the share.
+            startFloatingOrb()
+            handler.postDelayed(screenCaptureRunnable, 800L)
             // App intentionally stays alive so mic + Gemini voice keep working;
             // the floating orb gives the same "outside the app" experience.
         } catch (t: Throwable) {
