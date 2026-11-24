@@ -15,6 +15,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.view.animation.OvershootInterpolator
@@ -114,6 +115,15 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             }
         }
 
+    private val overlayPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (Settings.canDrawOverlays(this)) startFloatingOrb()
+        }
+
+    private var screenProjection: android.media.projection.MediaProjection? = null
+    private var screenDisplay: android.hardware.display.VirtualDisplay? = null
+    private var screenReader: ImageReader? = null
+
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* silent */ }
 
@@ -133,6 +143,16 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
         // Expanded actions (visible only while the mic session is live).
         findViewById<ImageButton>(R.id.screenShareButton).setOnClickListener {
+            if (Settings.canDrawOverlays(this)) {
+                startFloatingOrb()
+            } else {
+                overlayPermissionLauncher.launch(
+                    Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        android.net.Uri.parse("package:$packageName")
+                    )
+                )
+            }
             val mgr = getSystemService(MediaProjectionManager::class.java)
             screenPicker.launch(mgr.createScreenCaptureIntent())
         }
@@ -158,6 +178,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         }
         muteButton.setOnClickListener {
             micMuted = !micMuted
+            AeroState.micMuted = micMuted
             muteButton.setImageResource(if (micMuted) R.drawable.ic_mic_off else R.drawable.ic_mic)
         }
         findViewById<ImageButton>(R.id.attachButton).setOnClickListener {
@@ -183,6 +204,59 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         orbView.setMood(Prefs.mood(this))
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        when (intent.action) {
+            FloatingOrbService.ACTION_OPEN_FILES -> {
+                docPicker.launch(
+                    arrayOf(
+                        "application/pdf", "image/*", "text/plain",
+                        "application/msword",
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
+                )
+            }
+            FloatingOrbService.ACTION_OPEN_CAMERA -> {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                    == PackageManager.PERMISSION_GRANTED
+                ) {
+                    toggleCameraLive()
+                } else {
+                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                }
+            }
+            FloatingOrbService.ACTION_STOP_SCREEN -> {
+                stopProjection()
+                stopFloatingOrb()
+            }
+        }
+    }
+
+    private fun startFloatingOrb() {
+        try {
+            startForegroundService(Intent(this, FloatingOrbService::class.java))
+        } catch (t: Throwable) {
+            Log.e("AeroOverlay", "start failed", t)
+        }
+    }
+
+    private fun stopFloatingOrb() {
+        stopService(Intent(this, FloatingOrbService::class.java))
+    }
+
+    private fun stopProjection() {
+        handler.removeCallbacks(screenCaptureRunnable)
+        try {
+            screenDisplay?.release()
+            screenProjection?.stop()
+            screenReader?.close()
+        } catch (_: Exception) {
+        }
+        screenDisplay = null
+        screenProjection = null
+        screenReader = null
+    }
+
     private fun startSession() {
         val key = Prefs.apiKey(this)
         if (key == null) {
@@ -197,6 +271,8 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         }
 
         sessionActive = true
+        AeroState.sessionActive = true
+        AeroState.micMuted = false
         setMicActiveUI(true)
         handler.post(drainRunnable)
 
@@ -213,6 +289,12 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     private fun stopSession() {
         sessionActive = false
+        AeroState.sessionActive = false
+        AeroState.micBoost = 0f
+        AeroState.aiBoost = 0f
+        AeroState.micMuted = false
+        stopProjection()
+        stopFloatingOrb()
         closeCameraLive()
         handler.removeCallbacks(drainRunnable)
         pendingResponses.clear()
@@ -326,6 +408,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                 // Let the orb vibrate with the user's voice.
                 val energy = rms(chunk)
                 orbView.micBoost = (energy / 0.12f).coerceIn(0f, 1f)
+                AeroState.micBoost = orbView.micBoost
 
                 // While the assistant is speaking, our mic feed is closed to
                 // prevent self-echo — but we still watch for the USER's voice.
@@ -366,6 +449,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         // A floor guarantees a clearly visible vibration even in quiet passages.
         val level = (rms(bytes) / 0.06f).coerceIn(0f, 1f)
         orbView.onAiAudio(level)
+        AeroState.aiBoost = 0.5f + 0.5f * level
         player?.enqueue(bytes)
     }
 
@@ -666,6 +750,31 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         return bitmap
     }
 
+    private val screenCaptureRunnable = object : Runnable {
+        override fun run() {
+            val reader = screenReader ?: return
+            val image = reader.acquireLatestImage()
+            if (image == null) {
+                handler.postDelayed(this, 1000L)
+                return
+            }
+            try {
+                val bitmap = imageToBitmap(image)
+                val scaled = scaleDown(bitmap, 640)
+                val baos = java.io.ByteArrayOutputStream()
+                scaled.compress(Bitmap.CompressFormat.JPEG, 60, baos)
+                if (scaled !== bitmap) scaled.recycle()
+                bitmap.recycle()
+                client?.sendImage(baos.toByteArray())
+            } catch (t: Throwable) {
+                Log.e("AeroScreen", "frame failed", t)
+            } finally {
+                image.close()
+            }
+            handler.postDelayed(this, 6000L)
+        }
+    }
+
     @Suppress("MissingPermission")
     private fun captureScreen(code: Int, data: Intent) {
         try {
@@ -679,22 +788,12 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                 android.hardware.display.DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 reader.surface, null, null
             )
-            handler.postDelayed({
-                val image = reader.acquireLatestImage()
-                if (image != null) {
-                    val bitmap = imageToBitmap(image)
-                    image.close()
-                    val scaled = scaleDown(bitmap, 640)
-                    val baos = java.io.ByteArrayOutputStream()
-                    scaled.compress(Bitmap.CompressFormat.JPEG, 60, baos)
-                    if (scaled !== bitmap) scaled.recycle()
-                    bitmap.recycle()
-                    client?.sendImage(baos.toByteArray())
-                }
-                display.release()
-                projection.stop()
-                reader.close()
-            }, 1200L)
+            screenProjection = projection
+            screenReader = reader
+            screenDisplay = display
+            handler.post(screenCaptureRunnable)
+            // Like Gemini: app goes away, only the floating orb stays.
+            moveTaskToBack(true)
         } catch (t: Throwable) {
             Log.e("AeroScreen", "capture failed", t)
         }
