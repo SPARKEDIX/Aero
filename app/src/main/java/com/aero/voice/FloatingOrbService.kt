@@ -50,7 +50,7 @@ class FloatingOrbService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             ServiceCompat.startForeground(
                 this, NOTIFICATION_ID, notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
             )
         } else {
             startForeground(NOTIFICATION_ID, notification)
@@ -145,10 +145,9 @@ class FloatingOrbService : Service() {
 
         root.findViewById<ImageButton>(R.id.overlayScreenToggle).setOnClickListener {
             Log.d(TAG, "screen toggle clicked")
-            // Stop the projection service directly — the user just wants to end
-            // screen sharing, NOT to open the app again.
+            // Stop ONLY the projection service. The floating orb stays so the
+            // user can keep using the assistant from the background.
             stopService(Intent(this, ScreenShareService::class.java))
-            stopSelf()
         }
 
         mute.setOnClickListener {
@@ -235,7 +234,8 @@ class FloatingOrbService : Service() {
         }
         return Notification.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_mic)
-            .setContentTitle("Aero is sharing your screen")
+            .setContentTitle("Aero is active")
+            .setContentText("Tap the orb to keep talking")
             .setOngoing(true)
             .build()
     }

@@ -124,7 +124,6 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                 } catch (t: Throwable) {
                     Log.e("AeroScreen", "failed to start projection service", t)
                 }
-                miniOrb.visibility = View.VISIBLE
             } else {
                 Log.w("AeroScreen", "consent cancelled result=${result.resultCode}")
             }
@@ -214,14 +213,10 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     override fun onResume() {
         super.onResume()
-        // In-app there is no floating ball — it only lives while the app is
-        // backgrounded. Projection stays alive so voice keeps working.
+        // The floating ball only lives while the app is backgrounded — never
+        // show it (or the in-app mini orb) while the user is inside Aero.
         stopFloatingOrb()
-        // If screen sharing was stopped (e.g. from the floating orb), hide the
-        // in-app mini orb indicator too.
-        if (!MediaProjectionHolder.isRunning) {
-            miniOrb.visibility = View.GONE
-        }
+        miniOrb.visibility = View.GONE
         // Settings may have changed the mood while we were away.
         orbView.setMood(Prefs.mood(this))
     }
@@ -288,8 +283,11 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     override fun onStop() {
         super.onStop()
-        // Minimizing while sharing keeps the voice alive and shows the orb.
-        if (sessionActive && MediaProjectionHolder.isRunning) startFloatingOrb()
+        // Whenever the app goes to the background, show the floating ball so the
+        // user can keep talking to the assistant — regardless of whether screen
+        // sharing is currently active. Use the GLOBAL session flag: with
+        // multiple activity instances (relaunch) the local field can be stale.
+        if (AeroState.sessionActive) startFloatingOrb()
     }
 
     private fun startSession() {
