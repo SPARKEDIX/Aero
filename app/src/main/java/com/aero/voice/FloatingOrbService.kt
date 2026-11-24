@@ -171,10 +171,17 @@ class FloatingOrbService : Service() {
 
         root.findViewById<ImageButton>(R.id.overlayClose).setOnClickListener {
             Log.d(TAG, "close clicked — full exit")
-            // End the background voice session completely (stop listening &
-            // speaking) and close the orb. The session service cleans up
-            // AeroState and KeepAliveService on destroy.
+            // Force-stop EVERYTHING Aero: background session, screen share /
+            // projection, keep-alive, and tell MainActivity to end any in-app
+            // session too. Pressing X always turns Aero fully off.
+            AeroState.sessionActive = false
+            AeroState.liveClient = null
+            AeroState.micBoost = 0f
+            AeroState.aiBoost = 0f
             stopService(Intent(this, BackgroundSessionService::class.java))
+            stopService(Intent(this, ScreenShareService::class.java))
+            stopService(Intent(this, KeepAliveService::class.java))
+            sendBroadcast(Intent(AeroActions.ACTION_EXIT_SESSION))
             stopSelf()
         }
 

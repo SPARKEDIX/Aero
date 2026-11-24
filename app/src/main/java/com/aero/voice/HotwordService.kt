@@ -149,16 +149,11 @@ class HotwordService : Service() {
     }
 
     private fun isWakePhrase(text: String): Boolean {
-        val t = normalize(text)
-        if (t.length < 4) return false
-        // Accept common phonetic variants users say: "hey aero", "hero aero",
-        // "ok aero", "airo", "ayro", "ero", "hero", "auro" …
-        val variants = listOf("aero", "airo", "ayro", "ero", "hero", "auro", "eyro", "eero")
-        if (variants.any { t.contains(it) }) return true
-        // Also accept the user-defined wake command from Settings.
+        // ONLY the user-defined wake command from Settings wakes Aero.
         val custom = normalize(Prefs.wakePhrase(this))
-        if (custom.length >= 3 && t.contains(custom)) return true
-        return false
+        if (custom.length < 3) return false
+        val t = normalize(text)
+        return t.contains(custom)
     }
 
     private fun normalize(s: String): String =

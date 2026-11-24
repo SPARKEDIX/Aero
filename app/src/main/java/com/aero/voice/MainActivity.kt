@@ -1,7 +1,10 @@
 package com.aero.voice
 
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
@@ -151,6 +154,20 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     /** True while the screen picker was opened from the floating orb. */
     private var launchedFromOrb = false
 
+    /** Fired by the floating orb's close button to force a full exit. */
+    private val exitReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == AeroActions.ACTION_EXIT_SESSION) {
+                Log.d("AeroDismiss", "exit broadcast received")
+                handler.post {
+                    if (sessionActive) stopSession()
+                    stopProjection()
+                    stopFloatingOrb()
+                }
+            }
+        }
+    }
+
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* silent */ }
 
@@ -226,6 +243,13 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         ) {
             HotwordService.start(this)
         }
+
+        // Listen for the floating orb's "close" full-exit broadcast.
+        registerReceiver(
+            exitReceiver,
+            IntentFilter(AeroActions.ACTION_EXIT_SESSION),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
 
         // Launched from the floating orb to (re)start screen sharing.
         if (intent.action == MainActivity.ACTION_START_SCREEN) {
@@ -876,6 +900,10 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     override fun onDestroy() {
         super.onDestroy()
+        try {
+            unregisterReceiver(exitReceiver)
+        } catch (_: Exception) {
+        }
         if (sessionActive) stopSession()
         stopProjection()
         stopFloatingOrb()
