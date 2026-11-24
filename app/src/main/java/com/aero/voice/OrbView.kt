@@ -49,6 +49,12 @@ class OrbView @JvmOverloads constructor(
     @Volatile
     private var lastAiAudioMs = 0L
 
+    // Latched for the whole AI turn (including silent gaps / web searches).
+    @Volatile
+    private var aiActive = false
+    @Volatile
+    private var aiActiveUntilMs = 0L
+
     // Smoothed values used for drawing (no abrupt jumps).
     private var micSmooth = 0f
     private var aiSmooth = 0f
@@ -94,14 +100,25 @@ class OrbView @JvmOverloads constructor(
     fun onAiAudio(level: Float) {
         aiLevel = level.coerceIn(0f, 1f)
         lastAiAudioMs = SystemClock.elapsedRealtime()
+        aiActive = true
+        aiActiveUntilMs = lastAiAudioMs + 4_000L
         aiBoost = 0.5f + 0.5f * aiLevel
         // Instant onset: the very first chunk must already make the ball shake.
         // No slow ramp from zero.
         if (aiSmooth < 0.90f) aiSmooth = 0.90f
     }
 
+    /** Called when the model starts a web_search — no audio arrives during the search. */
+    fun onAiToolCall() {
+        aiActive = true
+        aiActiveUntilMs = SystemClock.elapsedRealtime() + 30_000L
+        if (aiSmooth < 0.80f) aiSmooth = 0.80f
+    }
+
     /** Called when the assistant's turn finishes — stop the vibration right away. */
     fun onAiTurnEnd() {
+        aiActive = false
+        aiActiveUntilMs = 0L
         lastAiAudioMs = 0L
         aiLevel = 0f
     }
@@ -162,8 +179,8 @@ class OrbView @JvmOverloads constructor(
         val nowMs = SystemClock.elapsedRealtime()
         micBoost *= 0.90f
         micSmooth += (micBoost.coerceIn(0f, 1f) - micSmooth) * 0.10f
-        val aiTarget = if (nowMs - lastAiAudioMs < AI_HOLD_MS) {
-            0.75f + 0.25f * aiLevel
+        val aiTarget = if (aiActive && nowMs < aiActiveUntilMs) {
+            0.80f + 0.20f * aiLevel
         } else {
             0f
         }
@@ -351,9 +368,6 @@ class OrbView @JvmOverloads constructor(
     }
 
     companion object {
-        /** Keep the AI vibration alive between audio chunks. */
-        private const val AI_HOLD_MS = 1500L
-
         /**
          * AGSL: blue-violet sphere with soft, always-flowing smoke.
          * Four texture fetches per pixel — cheap enough for 60fps on budget GPUs.

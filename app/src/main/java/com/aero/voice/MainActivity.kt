@@ -139,6 +139,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         player = null
         orbView.micBoost = 0f
         orbView.aiBoost = 0f
+        orbView.onAiTurnEnd()
     }
 
     private fun setMicActiveUI(active: Boolean) {
@@ -243,7 +244,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     override fun onToolCall(calls: List<ToolCall>) {
         if (calls.isEmpty()) return
-
+        orbView.onAiToolCall()
         val job = searchScope.launch(start = CoroutineStart.LAZY) {
             // All calls in one toolCall batch run in parallel ("multi-instance"),
             // then their responses are sent together.
