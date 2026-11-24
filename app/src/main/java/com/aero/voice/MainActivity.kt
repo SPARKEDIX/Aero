@@ -117,12 +117,19 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     private val overlayPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            if (Settings.canDrawOverlays(this)) startFloatingOrb()
+            if (Settings.canDrawOverlays(this)) {
+                startFloatingOrb()
+                if (pendingScreenShare) {
+                    pendingScreenShare = false
+                    launchScreenPicker()
+                }
+            }
         }
 
     private var screenProjection: android.media.projection.MediaProjection? = null
     private var screenDisplay: android.hardware.display.VirtualDisplay? = null
     private var screenReader: ImageReader? = null
+    private var pendingScreenShare = false
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* silent */ }
@@ -151,7 +158,9 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         findViewById<ImageButton>(R.id.screenShareButton).setOnClickListener {
             if (Settings.canDrawOverlays(this)) {
                 startFloatingOrb()
+                launchScreenPicker()
             } else {
+                pendingScreenShare = true
                 overlayPermissionLauncher.launch(
                     Intent(
                         Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -159,8 +168,6 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                     )
                 )
             }
-            val mgr = getSystemService(MediaProjectionManager::class.java)
-            screenPicker.launch(mgr.createScreenCaptureIntent())
         }
         findViewById<ImageButton>(R.id.liveButton).setOnClickListener {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
@@ -241,6 +248,11 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                 stopFloatingOrb()
             }
         }
+    }
+
+    private fun launchScreenPicker() {
+        val mgr = getSystemService(MediaProjectionManager::class.java)
+        screenPicker.launch(mgr.createScreenCaptureIntent())
     }
 
     private fun startFloatingOrb() {
@@ -810,8 +822,8 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             screenReader = reader
             screenDisplay = display
             handler.post(screenCaptureRunnable)
-            // Like Gemini: app goes away, only the floating orb stays.
-            moveTaskToBack(true)
+            // App intentionally stays alive so mic + Gemini voice keep working;
+            // the floating orb gives the same "outside the app" experience.
         } catch (t: Throwable) {
             Log.e("AeroScreen", "capture failed", t)
         }
