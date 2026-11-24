@@ -217,6 +217,11 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         // In-app there is no floating ball — it only lives while the app is
         // backgrounded. Projection stays alive so voice keeps working.
         stopFloatingOrb()
+        // If screen sharing was stopped (e.g. from the floating orb), hide the
+        // in-app mini orb indicator too.
+        if (!MediaProjectionHolder.isRunning) {
+            miniOrb.visibility = View.GONE
+        }
         // Settings may have changed the mood while we were away.
         orbView.setMood(Prefs.mood(this))
     }

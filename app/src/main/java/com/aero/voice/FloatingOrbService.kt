@@ -11,6 +11,7 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -143,11 +144,10 @@ class FloatingOrbService : Service() {
         }
 
         root.findViewById<ImageButton>(R.id.overlayScreenToggle).setOnClickListener {
-            val intent = Intent(this, MainActivity::class.java).apply {
-                action = ACTION_STOP_SCREEN
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            }
-            startActivity(intent)
+            Log.d(TAG, "screen toggle clicked")
+            // Stop the projection service directly — the user just wants to end
+            // screen sharing, NOT to open the app again.
+            stopService(Intent(this, ScreenShareService::class.java))
             stopSelf()
         }
 
@@ -159,6 +159,7 @@ class FloatingOrbService : Service() {
         }
 
         root.findViewById<ImageButton>(R.id.overlayClose).setOnClickListener {
+            Log.d(TAG, "close clicked")
             stopSelf()
         }
 
@@ -252,6 +253,7 @@ class FloatingOrbService : Service() {
     }
 
     companion object {
+        private const val TAG = "AeroOverlay"
         const val ACTION_OPEN_FILES = "com.aero.voice.OPEN_FILES"
         const val ACTION_OPEN_CAMERA = "com.aero.voice.OPEN_CAMERA"
         const val ACTION_STOP_SCREEN = "com.aero.voice.STOP_SCREEN"
