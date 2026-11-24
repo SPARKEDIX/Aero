@@ -71,7 +71,7 @@
 
         <service
             android:name=".AeroVoiceInteractionSessionService"
-            android:exported="false"
+            android:exported="true"
             android:permission="android.permission.BIND_VOICE_INTERACTION_SESSION">
             <intent-filter>
                 <action android:name="android.service.voice.VoiceInteractionSessionService" />
@@ -82,6 +82,23 @@
             android:name=".SettingsActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".AssistantProxyActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:noHistory="true"
+            android:theme="@style/Theme.AeroVoice.Transparent">
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VOICE_ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
         <activity
             android:name=".ScreenShareConsentActivity"

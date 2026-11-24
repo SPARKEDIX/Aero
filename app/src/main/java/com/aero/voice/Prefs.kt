@@ -10,6 +10,7 @@ object Prefs {
     private const val KEY_PROMPT = "system_prompt"
     private const val KEY_THEME = "theme"
     private const val KEY_MOOD = "mood"
+    private const val KEY_HOTWORD = "hotword_enabled"
 
     const val THEME_LIGHT = "light"
     const val THEME_DARK = "dark"
@@ -47,6 +48,17 @@ object Prefs {
     fun saveMood(ctx: Context, mood: String) {
         ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
             .putString(KEY_MOOD, mood)
+            .apply()
+    }
+
+    /** Hotword ("Hey Aero") is opt-in — off by default to save battery. */
+    fun hotwordEnabled(ctx: Context): Boolean =
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getBoolean(KEY_HOTWORD, false)
+
+    fun setHotwordEnabled(ctx: Context, enabled: Boolean) {
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_HOTWORD, enabled)
             .apply()
     }
 

@@ -26,6 +26,8 @@
     <string name="settings_save">Save</string>
     <string name="settings_assistant_button">Set Aero as default assistant</string>
     <string name="settings_assistant_helper">Replaces the current digital assistant (e.g. Gemini) with Aero when you hold the Home button / use the assistant gesture.</string>
+    <string name="settings_hotword_label">Hey Aero hotword</string>
+    <string name="settings_hotword_helper">Listen for "Hey Aero" in the background to summon Aero without opening the app. Off by default to save battery.</string>
     <string name="key_visibility_desc">Show or hide API key</string>
     <string name="settings_back">Back</string>
     <string name="settings_theme_label">Color theme</string>

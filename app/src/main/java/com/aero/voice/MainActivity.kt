@@ -219,9 +219,9 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
 
-        // Enable always-on hotword listening ("Hey Aero") when we have mic
-        // permission. It runs as a lightweight foreground service.
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+        // Hotword listening ("Hey Aero") only runs when the user opted in.
+        if (Prefs.hotwordEnabled(this)
+            && ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
             == PackageManager.PERMISSION_GRANTED
         ) {
             HotwordService.start(this)
