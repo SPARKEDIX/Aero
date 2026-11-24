@@ -113,9 +113,12 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     private val screenPicker =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK && result.data != null) {
+                Log.d("AeroScreen", "consent OK, starting stream")
                 screenManager.start(result.resultCode, result.data!!)
                 miniOrb.visibility = View.VISIBLE
                 Log.d("AeroScreen", "UI: stream started, mini orb shown")
+            } else {
+                Log.w("AeroScreen", "consent cancelled result=${result.resultCode}")
             }
         }
 
@@ -268,6 +271,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     private fun launchScreenPicker() {
         val mgr = getSystemService(MediaProjectionManager::class.java)
+        Log.d("AeroScreen", "launching consent")
         screenPicker.launch(mgr.createScreenCaptureIntent())
     }
 
