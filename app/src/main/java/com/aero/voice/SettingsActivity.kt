@@ -1,5 +1,7 @@
 package com.aero.voice
 
+import android.app.role.RoleManager
+import android.content.Intent
 import android.os.Bundle
 import android.text.InputType
 import android.view.View
@@ -108,5 +110,47 @@ class SettingsActivity : AppCompatActivity() {
             Prefs.save(this, key, voice)
             status.text = "Saved."
         }
+
+        findViewById<MaterialButton>(R.id.assistantButton).setOnClickListener {
+            requestAssistantRole()
+        }
+    }
+
+    // True while we've asked the system to switch the assistant role.
+    private var assistantRequestPending = false
+
+    private fun requestAssistantRole() {
+        val roleManager = getSystemService(RoleManager::class.java)
+        if (roleManager == null || !roleManager.isRoleAvailable(RoleManager.ROLE_ASSISTANT)) {
+            findViewById<TextView>(R.id.settingsStatus).text =
+                "Assistant role not available on this device."
+            return
+        }
+        val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT)
+        assistantRequestPending = true
+        // Fire-and-forget: some OEM permission dialogs don't return a proper
+        // Activity result, so we verify on resume by querying the role holders.
+        startActivity(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (!assistantRequestPending) return
+        assistantRequestPending = false
+        val roleManager = getSystemService(RoleManager::class.java)
+        val held = roleManager?.isRoleHeld(RoleManager.ROLE_ASSISTANT) == true
+        val status = findViewById<TextView>(R.id.settingsStatus)
+        if (held) {
+            status.text = "Aero is now your default assistant."
+            // The app is already the assistant — nothing else to do.
+            AeroState.assistantRoleGranted = true
+        } else {
+            status.text =
+                "Not changed. You can also set it manually: Settings → Apps → Default apps → Digital assistant → Aero."
+        }
+    }
+
+    companion object {
+        private const val REQUEST_ASSISTANT_ROLE = 7701
     }
 }

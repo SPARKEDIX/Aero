@@ -191,6 +191,27 @@
                 android:textStyle="bold"
                 android:text="@string/settings_save" />
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/assistantButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                app:cornerRadius="14dp"
+                app:backgroundTint="@color/orb_purple"
+                android:textColor="@android:color/white"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:text="@string/settings_assistant_button" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/settings_assistant_helper"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:lineSpacingExtra="2dp" />
+
             <TextView
                 android:id="@+id/settingsStatus"
                 android:layout_width="match_parent"

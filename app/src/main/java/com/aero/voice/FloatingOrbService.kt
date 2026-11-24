@@ -11,6 +11,7 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -271,5 +272,20 @@ class FloatingOrbService : Service() {
         const val EXTRA_CODE = "media_projection_code"
         const val EXTRA_DATA = "media_projection_data"
         private const val NOTIFICATION_ID = 77
+
+        /** Shows the floating orb (no-op if overlay permission is missing). */
+        fun show(ctx: Context) {
+            if (!Settings.canDrawOverlays(ctx)) return
+            try {
+                ctx.startForegroundService(Intent(ctx, FloatingOrbService::class.java))
+            } catch (t: Throwable) {
+                Log.e(TAG, "show failed", t)
+            }
+        }
+
+        /** Hides the floating orb. */
+        fun hide(ctx: Context) {
+            ctx.stopService(Intent(ctx, FloatingOrbService::class.java))
+        }
     }
 }

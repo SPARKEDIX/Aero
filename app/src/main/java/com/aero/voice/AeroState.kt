@@ -17,4 +17,8 @@ object AeroState {
     /** Set while a voice session runs, so the floating service can send frames. */
     @Volatile
     var liveClient: GeminiLiveClient? = null
+
+    /** True once Aero has been granted the system assistant role. */
+    @Volatile
+    var assistantRoleGranted = false
 }

@@ -24,6 +24,8 @@
     <string name="settings_voice_label">Voice</string>
     <string name="settings_prompt_label">System instruction (optional)</string>
     <string name="settings_save">Save</string>
+    <string name="settings_assistant_button">Set Aero as default assistant</string>
+    <string name="settings_assistant_helper">Replaces the current digital assistant (e.g. Gemini) with Aero when you hold the Home button / use the assistant gesture.</string>
     <string name="key_visibility_desc">Show or hide API key</string>
     <string name="settings_back">Back</string>
     <string name="settings_theme_label">Color theme</string>

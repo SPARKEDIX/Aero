@@ -219,6 +219,14 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
 
+        // Enable always-on hotword listening ("Hey Aero") when we have mic
+        // permission. It runs as a lightweight foreground service.
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            HotwordService.start(this)
+        }
+
         // Launched from the floating orb to (re)start screen sharing.
         if (intent.action == MainActivity.ACTION_START_SCREEN) {
             launchedFromOrb = true
@@ -490,7 +498,15 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     }
 
     override fun onUserText(text: String) {
-        // text is intentionally not shown
+        // Spoken dismiss intents ("tu jaa", "bye", …) close the session + orb.
+        if (DismissIntents.matches(text)) {
+            Log.d("AeroDismiss", "dismiss intent heard: \"$text\"")
+            handler.post {
+                stopSession()
+                stopProjection()
+                stopFloatingOrb()
+            }
+        }
     }
 
     override fun onAssistantText(text: String) {
