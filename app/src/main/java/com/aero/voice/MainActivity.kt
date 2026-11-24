@@ -127,6 +127,12 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             } else {
                 Log.w("AeroScreen", "consent cancelled result=${result.resultCode}")
             }
+            // If the picker was opened from the floating orb, drop the user
+            // back to the background when done, so they can keep using the orb.
+            if (launchedFromOrb) {
+                launchedFromOrb = false
+                moveTaskToBack(true)
+            }
         }
 
     private val overlayPermissionLauncher =
@@ -141,6 +147,9 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         }
 
     private var pendingScreenShare = false
+
+    /** True while the screen picker was opened from the floating orb. */
+    private var launchedFromOrb = false
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* silent */ }
@@ -209,6 +218,12 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         if (Prefs.apiKey(this) == null) {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
+
+        // Launched from the floating orb to (re)start screen sharing.
+        if (intent.action == MainActivity.ACTION_START_SCREEN) {
+            launchedFromOrb = true
+            launchScreenPicker()
+        }
     }
 
     override fun onResume() {
@@ -224,6 +239,10 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         when (intent.action) {
+            MainActivity.ACTION_START_SCREEN -> {
+                launchedFromOrb = true
+                launchScreenPicker()
+            }
             FloatingOrbService.ACTION_OPEN_FILES -> {
                 docPicker.launch(
                     arrayOf(
@@ -848,6 +867,8 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     }
 
     companion object {
+        const val ACTION_START_SCREEN = "com.aero.voice.START_SCREEN"
+
         /** Do not speak over the assistant: wait this long after its last audio chunk. */
         private const val SPEECH_GAP_MS = 3_000L
     }

@@ -145,9 +145,23 @@ class FloatingOrbService : Service() {
 
         root.findViewById<ImageButton>(R.id.overlayScreenToggle).setOnClickListener {
             Log.d(TAG, "screen toggle clicked")
-            // Stop ONLY the projection service. The floating orb stays so the
-            // user can keep using the assistant from the background.
-            stopService(Intent(this, ScreenShareService::class.java))
+            if (MediaProjectionHolder.isRunning) {
+                // Share is ON → stop only the projection service. The floating
+                // orb stays so the user can keep using the assistant.
+                stopService(Intent(this, ScreenShareService::class.java))
+            } else {
+                // Share is OFF → (re)start it. Android 14+ requires a fresh
+                // system consent dialog, which must be requested from an
+                // activity, so open Aero with a special action.
+                val intent = Intent(this, MainActivity::class.java).apply {
+                    action = MainActivity.ACTION_START_SCREEN
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    )
+                }
+                startActivity(intent)
+            }
         }
 
         mute.setOnClickListener {
