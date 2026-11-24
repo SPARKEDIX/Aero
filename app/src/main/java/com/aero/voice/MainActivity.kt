@@ -8,11 +8,26 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Log
 import android.widget.ImageView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.aero.voice.search.SearchOrchestrator
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.util.ArrayDeque
 
 class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
@@ -30,6 +45,25 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     private var lastFlushAt = 0L
     private var lastBargeInAt = 0L
     private var micOpen = true
+
+    // ---- Internet access (background searches + queued tool responses) ----
+    private val searchScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val searchOrchestrator = SearchOrchestrator()
+    private val pendingResponses = ArrayDeque<PendingBatch>()
+    // Only touched on the main thread (handler), so a plain HashMap is safe.
+    private val toolJobs = HashMap<String, Job>()
+    private var lastDequeuedAt = 0L
+
+    private data class PendingBatch(val responses: List<ToolResponse>)
+
+    /** Drains queued search results only after the assistant has been quiet for 3s. */
+    private val drainRunnable = object : Runnable {
+        override fun run() {
+            if (!sessionActive) return
+            drainQueue()
+            handler.postDelayed(this, 400L)
+        }
+    }
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* silent */ }
@@ -70,6 +104,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
         sessionActive = true
         setMicActiveUI(true)
+        handler.post(drainRunnable)
 
         player = AudioPlayer().also { it.start() }
         client = GeminiLiveClient(
@@ -83,6 +118,13 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     private fun stopSession() {
         sessionActive = false
+        handler.removeCallbacks(drainRunnable)
+        pendingResponses.clear()
+        toolJobs.values.toSet().forEach { it.cancel() }
+        toolJobs.clear()
+        searchScope.coroutineContext.cancelChildren()
+        lastDequeuedAt = 0L
+
         setMicActiveUI(false)
         recorder?.stop()
         recorder = null
@@ -191,6 +233,92 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         }
     }
 
+    // ---- Internet access ----
+
+    override fun onToolCall(calls: List<ToolCall>) {
+        if (calls.isEmpty()) return
+
+        val job = searchScope.launch(start = CoroutineStart.LAZY) {
+            // All calls in one toolCall batch run in parallel ("multi-instance"),
+            // then their responses are sent together.
+            val responses = calls.map { call ->
+                async {
+                    val query = call.args.optString("query").trim()
+                    val result = if (query.isEmpty()) {
+                        JSONObject().put("error", "empty search query")
+                    } else {
+                        try {
+                            searchOrchestrator.search(query).toJson()
+                        } catch (t: Throwable) {
+                            JSONObject().put("error", t.message ?: "search failed")
+                        }
+                    }
+                    ToolResponse(call.id, call.name, result)
+                }
+            }.awaitAll()
+
+            withContext(Dispatchers.Main) {
+                if (sessionActive) {
+                    pendingResponses.addLast(PendingBatch(responses))
+                    Log.d(
+                        "Search",
+                        "queued ${responses.size} tool response(s), pending=${pendingResponses.size}"
+                    )
+                }
+            }
+        }
+
+        handler.post {
+            calls.forEach { toolJobs[it.id] = job }
+        }
+        job.invokeOnCompletion {
+            handler.post {
+                calls.forEach { call ->
+                    if (toolJobs[call.id] === job) toolJobs.remove(call.id)
+                }
+            }
+        }
+        job.start()
+    }
+
+    override fun onToolCallCancellation(ids: List<String>) {
+        if (ids.isEmpty()) return
+        handler.post {
+            ids.forEach { id -> toolJobs.remove(id)?.cancel() }
+            val toRemove = ArrayList<PendingBatch>()
+            for (batch in pendingResponses) {
+                for (r in batch.responses) {
+                    if (ids.contains(r.id)) {
+                        toRemove.add(batch)
+                        break
+                    }
+                }
+            }
+            pendingResponses.removeAll(toRemove)
+        }
+    }
+
+    /**
+     * Sends the next queued search result only when the assistant has been quiet
+     * for [SPEECH_GAP_MS]. Results that arrive mid-answer wait their turn instead
+     * of interrupting, then follow one by one with the same gap.
+     */
+    private fun drainQueue() {
+        if (pendingResponses.isEmpty()) return
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastAssistantAudioAt < SPEECH_GAP_MS) return
+        if (now - lastDequeuedAt < SPEECH_GAP_MS) return
+
+        val batch = pendingResponses.removeFirst()
+        lastDequeuedAt = now
+        Log.d(
+            "Search",
+            "sending ${batch.responses.size} tool response(s) after " +
+                "${now - lastAssistantAudioAt} ms of silence"
+        )
+        client?.sendToolResponses(batch.responses)
+    }
+
     override fun onError(msg: String) {
         handler.post { stopSession() }
     }
@@ -202,5 +330,11 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     override fun onDestroy() {
         super.onDestroy()
         if (sessionActive) stopSession()
+        searchScope.cancel()
+    }
+
+    companion object {
+        /** Do not speak over the assistant: wait this long after its last audio chunk. */
+        private const val SPEECH_GAP_MS = 3_000L
     }
 }

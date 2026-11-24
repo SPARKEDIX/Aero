@@ -21,6 +21,20 @@ Full voice-to-voice AI assistant for Android using the **Gemini Live API**
 The app uses **`gemini-3.8-live`** by default — editable in Settings if you ever need to change it.
 If you see an error like *model not found*, just open Settings and update the Model ID.
 
+## Live internet access
+The assistant can search the web in real time (free, key-less):
+
+- When you ask about news, weather, prices, sports or anything current, the model
+  calls the built-in `web_search` tool.
+- The app fans the query out to **10+ free sources in parallel** — DuckDuckGo,
+  Wikipedia, Google News, Bing News, Hacker News, Reddit, Stack Overflow, GitHub,
+  Open-Meteo (weather) and CoinGecko (crypto).
+- Results are returned to the model as JSON; it synthesizes a spoken answer.
+- Multiple sources are rate-limited (per-source interval + exponential cooldown),
+  so you never hit a "too many requests" wall. Results are cached for 5 minutes.
+- If several results arrive while the assistant is already speaking, they are queued
+  and announced one by one, 3 seconds after it finishes each part.
+
 ## Build output
 - Signed release APK: `app/build/outputs/apk/release/app-release.apk`
 - Debug APK: `app/build/outputs/apk/debug/app-debug.apk`
