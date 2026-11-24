@@ -72,10 +72,6 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        findViewById<ImageView>(R.id.menuButton).setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
-        }
-
         findViewById<ImageView>(R.id.settingsButton).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
@@ -139,7 +135,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     private fun setMicActiveUI(active: Boolean) {
         micButton.setImageResource(if (active) R.drawable.ic_stop else R.drawable.ic_mic)
         micButton.backgroundTintList = ColorStateList.valueOf(
-            if (active) getColor(R.color.orb_purple) else android.graphics.Color.WHITE
+            if (active) getColor(R.color.orb_purple) else getColor(R.color.bg_circle)
         )
         micButton.imageTintList = ColorStateList.valueOf(
             if (active) android.graphics.Color.WHITE else getColor(R.color.text_dark)

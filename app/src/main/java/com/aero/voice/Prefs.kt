@@ -8,6 +8,11 @@ object Prefs {
     private const val KEY_MODEL = "model_id"
     private const val KEY_VOICE = "voice"
     private const val KEY_PROMPT = "system_prompt"
+    private const val KEY_THEME = "theme"
+
+    const val THEME_LIGHT = "light"
+    const val THEME_DARK = "dark"
+    const val THEME_SYSTEM = "system"
 
     const val DEFAULT_MODEL = "gemini-3.8-live"
     const val DEFAULT_VOICE = "Kore"
@@ -24,6 +29,15 @@ object Prefs {
 
     fun systemPrompt(ctx: Context): String =
         ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY_PROMPT, DEFAULT_PROMPT) ?: DEFAULT_PROMPT
+
+    fun theme(ctx: Context): String =
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY_THEME, THEME_LIGHT) ?: THEME_LIGHT
+
+    fun saveTheme(ctx: Context, theme: String) {
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
+            .putString(KEY_THEME, theme)
+            .apply()
+    }
 
     fun save(ctx: Context, apiKey: String, model: String, voice: String, prompt: String) {
         ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()

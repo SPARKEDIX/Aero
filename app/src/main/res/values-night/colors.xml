@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#0B0D13</color>
+    <color name="bg_circle">#232733</color>
+    <color name="surface">#181B24</color>
+    <color name="surface2">#232733</color>
+    <color name="border">#303546</color>
+    <color name="accent">#5B5BF0</color>
+    <color name="orb_purple">#5B5BF0</color>
+    <color name="green">#22C55E</color>
+    <color name="red">#EF4444</color>
+    <color name="text_primary">#F2F3F7</color>
+    <color name="text_secondary">#A0A7B5</color>
+    <color name="text_dark">#F2F3F7</color>
+    <color name="launcher_bg">#0E1420</color>
+</resources>

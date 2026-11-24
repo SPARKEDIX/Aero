@@ -20,4 +20,8 @@
     <string name="settings_prompt_label">System instruction (optional)</string>
     <string name="settings_save">Save &amp; Test</string>
     <string name="settings_back">Back</string>
+    <string name="settings_theme_label">Color theme</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_system">System</string>
 </resources>

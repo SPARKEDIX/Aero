@@ -12,20 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Top-left menu pill -->
-    <ImageView
-        android:id="@+id/menuButton"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:layout_gravity="top|start"
-        android:layout_margin="24dp"
-        android:background="@drawable/bg_circle_white"
-        android:elevation="6dp"
-        android:src="@drawable/ic_menu"
-        android:padding="16dp"
-        android:contentDescription="@string/settings_desc" />
-
-    <!-- Top-right voice settings pill -->
+    <!-- Single settings button (top-right sliders pill) -->
     <ImageView
         android:id="@+id/settingsButton"
         android:layout_width="56dp"
@@ -47,7 +34,7 @@
         android:layout_marginBottom="56dp"
         android:elevation="10dp"
         app:shapeAppearanceOverlay="@style/ShapeAppearance.AeroVoice.Circle"
-        app:backgroundTint="@android:color/white"
+        app:backgroundTint="@color/bg_circle"
         app:tint="@color/text_dark"
         app:srcCompat="@drawable/ic_mic"
         android:contentDescription="@string/mic_desc" />

@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.ArrayAdapter
 import android.widget.EditText
+import android.widget.RadioGroup
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -27,6 +28,28 @@ class SettingsActivity : AppCompatActivity() {
         val voiceSpinner = findViewById<Spinner>(R.id.voiceSpinner)
         val promptInput = findViewById<EditText>(R.id.promptInput)
         val status = findViewById<TextView>(R.id.settingsStatus)
+
+        // Color theme: Light keeps the current look; Dark and System are dark.
+        val themeGroup = findViewById<RadioGroup>(R.id.themeRadioGroup)
+        themeGroup.check(
+            when (Prefs.theme(this)) {
+                Prefs.THEME_DARK -> R.id.radioThemeDark
+                Prefs.THEME_SYSTEM -> R.id.radioThemeSystem
+                else -> R.id.radioThemeLight
+            }
+        )
+        themeGroup.setOnCheckedChangeListener { _, checkedId ->
+            val selected = when (checkedId) {
+                R.id.radioThemeDark -> Prefs.THEME_DARK
+                R.id.radioThemeSystem -> Prefs.THEME_SYSTEM
+                else -> Prefs.THEME_LIGHT
+            }
+            if (selected != Prefs.theme(this)) {
+                Prefs.saveTheme(this, selected)
+                Theme.apply(this)
+                recreate()
+            }
+        }
 
         voiceSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, voices).apply {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
