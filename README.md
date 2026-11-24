@@ -57,3 +57,7 @@ AERO_KEY_PASSWORD=…
 ```
 
 Without those entries the release build is produced unsigned.
+
+## License
+
+[MIT](LICENSE) © 2026 Kartik Sharma
