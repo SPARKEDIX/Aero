@@ -138,7 +138,13 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         }
 
         micButton.setOnClickListener {
-            if (sessionActive) stopSession() else startSession()
+            if (sessionActive) {
+                stopSession()
+                stopProjection()
+                stopFloatingOrb()
+            } else {
+                startSession()
+            }
         }
 
         // Expanded actions (visible only while the mic session is live).
@@ -200,8 +206,9 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     override fun onResume() {
         super.onResume()
-        // In-app there is no floating ball — it only lives while screen sharing.
-        stopFloatingOrb()
+        // In-app there is no floating ball — but keep it during screen-share
+        // startup (the consent dialog briefly resumes this Activity).
+        if (screenProjection == null) stopFloatingOrb()
         // Settings may have changed the mood while we were away.
         orbView.setMood(Prefs.mood(this))
     }
@@ -297,8 +304,6 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         AeroState.micBoost = 0f
         AeroState.aiBoost = 0f
         AeroState.micMuted = false
-        stopProjection()
-        stopFloatingOrb()
         closeCameraLive()
         handler.removeCallbacks(drainRunnable)
         pendingResponses.clear()
@@ -891,6 +896,8 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     override fun onDestroy() {
         super.onDestroy()
         if (sessionActive) stopSession()
+        stopProjection()
+        stopFloatingOrb()
         searchScope.cancel()
     }
 
