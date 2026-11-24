@@ -12,15 +12,16 @@ import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Handler
 import android.os.HandlerThread
+import android.util.DisplayMetrics
 import android.util.Log
 import java.io.ByteArrayOutputStream
 
 /**
- * Clean, self-contained screen streaming for Gemini Live.
+ * Screen streaming for Gemini Live — same simple pipeline as the camera:
+ * capture a frame → JPEG → sendImage() → realtimeInput.video.
  *
- * Owns the MediaProjection, a dedicated capture thread, and the JPEG frame
- * pump. The caller only supplies [onFrame] (feed to the Live WebSocket) and
- * [onStopped] (cleanup UI). No main-thread work, no black frames.
+ * Uses the REAL display size and density (no fixed sizes), which avoids the
+ * black/blank frames caused by a mismatched virtual display.
  */
 class ScreenShareManager(private val app: Context) {
 
@@ -41,11 +42,16 @@ class ScreenShareManager(private val app: Context) {
     fun start(code: Int, data: Intent) {
         stop()
         try {
+            val metrics = app.resources.displayMetrics
+            val w = metrics.widthPixels
+            val h = metrics.heightPixels
+            val dpi = metrics.densityDpi
+
             val manager = app.getSystemService(MediaProjectionManager::class.java)
             val p = manager.getMediaProjection(code, data)
-            val r = ImageReader.newInstance(WIDTH, HEIGHT, PixelFormat.RGBA_8888, 3)
+            val r = ImageReader.newInstance(w, h, PixelFormat.RGBA_8888, 2)
             val d = p.createVirtualDisplay(
-                "AeroScreen", WIDTH, HEIGHT, DENSITY,
+                "AeroScreen", w, h, dpi,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 r.surface, null, handler
             )
@@ -63,8 +69,8 @@ class ScreenShareManager(private val app: Context) {
                 }
             }, handler)
 
-            handler.postDelayed(captureRunnable, FIRST_FRAME_DELAY_MS)
-            Log.d(TAG, "screen stream started")
+            handler.postDelayed(captureRunnable, 500L)
+            Log.d(TAG, "screen stream started ${w}x${h}@$dpi")
         } catch (t: Throwable) {
             Log.e(TAG, "start failed", t)
             running = false
@@ -78,24 +84,26 @@ class ScreenShareManager(private val app: Context) {
             if (image != null) {
                 try {
                     val bitmap = toBitmap(image)
-                    val scaled = scaleDown(bitmap, MAX_SIDE)
+                    val scaled = scaleDown(bitmap, 640)
                     val baos = ByteArrayOutputStream()
                     scaled.compress(Bitmap.CompressFormat.JPEG, 65, baos)
                     if (scaled !== bitmap) scaled.recycle()
                     bitmap.recycle()
                     frameNo++
                     onFrame?.invoke(baos.toByteArray(), frameNo)
+                    Log.d(TAG, "frame $frameNo sent ${baos.size()} bytes")
                 } catch (t: Throwable) {
                     Log.e(TAG, "frame capture failed", t)
                 } finally {
                     image.close()
                 }
+            } else {
+                Log.w(TAG, "no frame yet")
             }
-            handler.postDelayed(this, FRAME_INTERVAL_MS)
+            handler.postDelayed(this, 1000L)
         }
     }
 
-    /** Canonical MediaProjection RGBA -> Bitmap conversion with row padding. */
     private fun toBitmap(image: Image): Bitmap {
         val plane = image.planes[0]
         val w = image.width
@@ -106,13 +114,8 @@ class ScreenShareManager(private val app: Context) {
         val paddedWidth = w + (rowStride - pixelStride * w) / pixelStride
         val padded = Bitmap.createBitmap(paddedWidth, h, Bitmap.Config.ARGB_8888)
         padded.copyPixelsFromBuffer(buffer)
-        return if (paddedWidth == w) {
-            padded
-        } else {
-            val cropped = Bitmap.createBitmap(padded, 0, 0, w, h)
-            padded.recycle()
-            cropped
-        }
+        return if (paddedWidth == w) padded
+        else Bitmap.createBitmap(padded, 0, 0, w, h).also { padded.recycle() }
     }
 
     private fun scaleDown(source: Bitmap, maxSide: Int): Bitmap {
@@ -144,11 +147,5 @@ class ScreenShareManager(private val app: Context) {
 
     companion object {
         private const val TAG = "AeroScreen"
-        private const val WIDTH = 720
-        private const val HEIGHT = 1280
-        private const val DENSITY = 320
-        private const val MAX_SIDE = 640
-        private const val FIRST_FRAME_DELAY_MS = 500L
-        private const val FRAME_INTERVAL_MS = 1000L
     }
 }
