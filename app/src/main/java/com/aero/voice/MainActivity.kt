@@ -113,7 +113,10 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     private val screenPicker =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK && result.data != null) {
-                captureScreen(result.resultCode, result.data!!)
+                screenManager.start(result.resultCode, result.data!!)
+                miniOrb.visibility = View.VISIBLE
+                startFloatingOrb()
+                searchScope.launch { Mirage.load(this@MainActivity) }
             }
         }
 
@@ -128,10 +131,9 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             }
         }
 
-    private var screenProjection: android.media.projection.MediaProjection? = null
-    private var screenDisplay: android.hardware.display.VirtualDisplay? = null
-    private var screenReader: ImageReader? = null
     private var pendingScreenShare = false
+
+    private val screenManager by lazy { ScreenShareManager(this) }
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* silent */ }
@@ -144,6 +146,29 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
         findViewById<ImageView>(R.id.settingsButton).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
+        }
+
+        screenManager.onFrame = { jpeg, frameNo ->
+            handler.post {
+                miniOrbView.micBoost = AeroState.micBoost
+                miniOrbView.aiBoost = AeroState.aiBoost
+            }
+            client?.sendImage(jpeg)
+            if (Mirage.isReady && frameNo % 3 == 0) {
+                try {
+                    val bmp = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size)
+                    val text = Mirage.describe(bmp)
+                    bmp.recycle()
+                    if (text.isNotBlank()) client?.sendContextText("Screen content: $text")
+                } catch (_: Exception) {
+                }
+            }
+        }
+        screenManager.onStopped = {
+            handler.post {
+                miniOrb.visibility = View.GONE
+                stopFloatingOrb()
+            }
         }
 
         micButton.setOnClickListener {
@@ -270,24 +295,14 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     }
 
     private fun stopProjection() {
-        handler.removeCallbacks(screenCaptureRunnable)
-        handler.removeCallbacks(miniOrbPump)
+        screenManager.stop()
         miniOrb.visibility = View.GONE
-        try {
-            screenDisplay?.release()
-            screenProjection?.stop()
-            screenReader?.close()
-        } catch (_: Exception) {
-        }
-        screenDisplay = null
-        screenProjection = null
-        screenReader = null
     }
 
     override fun onStop() {
         super.onStop()
         // Minimizing while sharing keeps the voice alive and shows the orb.
-        if (sessionActive && screenProjection != null) startFloatingOrb()
+        if (sessionActive && screenManager.isRunning) startFloatingOrb()
     }
 
     private fun startSession() {
@@ -784,112 +799,6 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     }
 
     private var screenFrameCount = 0
-
-    private fun captureScreenFrame() {
-        val reader = screenReader ?: return
-        val image = reader.acquireLatestImage() ?: return
-        try {
-            val bitmap = imageToBitmap(image)
-            val scaled = scaleDown(bitmap, 640)
-            val baos = java.io.ByteArrayOutputStream()
-            scaled.compress(Bitmap.CompressFormat.JPEG, 60, baos)
-
-            // Send the raw frame to Gemini vision...
-            client?.sendImage(baos.toByteArray())
-
-            // ...and run the on-device Mirage OCR every 3rd frame, then feed
-            // its text into the same conversation.
-            screenFrameCount++
-            if (Mirage.isReady && screenFrameCount % 3 == 0) {
-                val text = Mirage.describe(scaled)
-                if (text.isNotBlank()) {
-                    client?.sendContextText("Screen content: $text")
-                }
-            }
-
-            if (scaled !== bitmap) scaled.recycle()
-            bitmap.recycle()
-            Log.d("AeroScreen", "frame sent: ${baos.size()} bytes")
-        } catch (t: Throwable) {
-            Log.e("AeroScreen", "frame failed", t)
-        } finally {
-            image.close()
-        }
-    }
-
-    private val screenCaptureRunnable = object : Runnable {
-        override fun run() {
-            captureScreenFrame()
-            // Live API allows up to 1 image frame per second. Keep streaming.
-            handler.postDelayed(this, 1000L)
-        }
-    }
-
-    private val miniOrbPump = object : Runnable {
-        override fun run() {
-            if (screenProjection == null) return
-            miniOrbView.micBoost = AeroState.micBoost
-            miniOrbView.aiBoost = AeroState.aiBoost
-            handler.postDelayed(this, 80L)
-        }
-    }
-
-    @Suppress("MissingPermission")
-    private fun captureScreen(code: Int, data: Intent) {
-        try {
-            val manager = getSystemService(MediaProjectionManager::class.java)
-            val projection = manager.getMediaProjection(code, data)
-            val reader = ImageReader.newInstance(
-                480, 800, android.graphics.PixelFormat.RGBA_8888, 2
-            )
-            val display = projection.createVirtualDisplay(
-                "aero-screen", 480, 800, 320,
-                android.hardware.display.DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                reader.surface, null, null
-            )
-            screenProjection = projection
-            screenReader = reader
-            screenDisplay = display
-            // Show the floating orb immediately — it must appear with the share.
-            startFloatingOrb()
-            searchScope.launch {
-                Mirage.load(this@MainActivity)
-                Log.d("AeroScreen", "Mirage ready=${Mirage.isReady}")
-            }
-            miniOrb.visibility = View.VISIBLE
-            handler.post(miniOrbPump)
-            handler.postDelayed({
-                captureScreenFrame()
-                handler.postDelayed(screenCaptureRunnable, 1000L)
-            }, 500L)
-            // App intentionally stays alive so mic + Gemini voice keep working;
-            // the floating orb gives the same "outside the app" experience.
-        } catch (t: Throwable) {
-            Log.e("AeroScreen", "capture failed", t)
-        }
-    }
-
-    private fun imageToBitmap(image: Image): Bitmap {
-        val plane = image.planes[0]
-        val w = image.width
-        val h = image.height
-        val buffer = plane.buffer.apply { rewind() }
-
-        // Canonical MediaProjection -> Bitmap conversion. Handles row padding
-        // and the BGRA byte order used by ARGB_8888 on little-endian devices.
-        val rowStride = plane.rowStride
-        val pixelStride = plane.pixelStride
-        val paddedWidth = w + (rowStride - pixelStride * w) / pixelStride
-        val padded = Bitmap.createBitmap(paddedWidth, h, Bitmap.Config.ARGB_8888)
-        padded.copyPixelsFromBuffer(buffer)
-        return if (paddedWidth == w) {
-            padded
-        } else {
-            val cropped = Bitmap.createBitmap(padded, 0, 0, w, h)
-            padded.recycle()
-            cropped
-        }
-    }
 
     private fun handleDocument(uri: Uri) {
         searchScope.launch {
