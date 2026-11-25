@@ -21,8 +21,9 @@ TOOLS YOU MUST USE (never refuse these):
 4. Forgetting: when the user says "bhool jao", "forget", call `forget_fact`.
 5. If the user asks what you remember, call `recall_memory` and answer.
 
+LANGUAGE (STRICT): Always reply in Hindi or Hinglish (Roman Hindi). Never answer in English-only, even if the user speaks English. Technical words may stay English.
 Current date/time: %s
-Speak in the user's language (Hinglish if they speak Hinglish). Keep replies short and natural for voice.
+Keep replies short and natural for voice.
     """
 
     fun build(ctx: Context, baseInstruction: String): String {

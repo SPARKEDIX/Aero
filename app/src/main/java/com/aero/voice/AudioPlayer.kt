@@ -3,6 +3,7 @@ package com.aero.voice
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import android.util.Log
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -10,6 +11,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * Plays Gemini Live audio output (24 kHz mono PCM16) as it streams in,
  * with a small queue so playback stays smooth and low-latency.
+ *
+ * While an Aero call is active the track switches to VOICE_COMMUNICATION
+ * usage, so the call audio can go to the earpiece (default) or speaker.
  */
 class AudioPlayer {
 
@@ -17,42 +21,70 @@ class AudioPlayer {
     private val running = AtomicBoolean(false)
     private var thread: Thread? = null
 
+    private fun buildTrack(callMode: Boolean): AudioTrack {
+        val sampleRate = 24000
+        val minBuf = AudioTrack.getMinBufferSize(
+            sampleRate,
+            AudioFormat.CHANNEL_OUT_MONO,
+            AudioFormat.ENCODING_PCM_16BIT
+        )
+        return AudioTrack.Builder()
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(
+                        if (callMode) AudioAttributes.USAGE_VOICE_COMMUNICATION
+                        else AudioAttributes.USAGE_MEDIA
+                    )
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build()
+            )
+            .setAudioFormat(
+                AudioFormat.Builder()
+                    .setSampleRate(sampleRate)
+                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                    .build()
+            )
+            .setBufferSizeInBytes(maxOf(minBuf * 2, 48000))
+            .setTransferMode(AudioTrack.MODE_STREAM)
+            .build()
+    }
+
     fun start() {
         if (running.getAndSet(true)) return
         thread = Thread({
-            val sampleRate = 24000
-            val minBuf = AudioTrack.getMinBufferSize(
-                sampleRate,
-                AudioFormat.CHANNEL_OUT_MONO,
-                AudioFormat.ENCODING_PCM_16BIT
-            )
-            val track = AudioTrack.Builder()
-                .setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                        .build()
-                )
-                .setAudioFormat(
-                    AudioFormat.Builder()
-                        .setSampleRate(sampleRate)
-                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                        .build()
-                )
-                .setBufferSizeInBytes(maxOf(minBuf * 2, 48000))
-                .setTransferMode(AudioTrack.MODE_STREAM)
-                .build()
-
+            var callMode = AeroState.inCall
+            var track = buildTrack(callMode)
             // Moderate volume reduces speaker->mic leakage to the assistant.
             track.setVolume(0.85f)
             track.play()
             while (running.get()) {
+                // Switch routing when a call starts/ends mid-session.
+                if (callMode != AeroState.inCall) {
+                    try {
+                        track.stop()
+                        track.release()
+                    } catch (_: Throwable) {
+                    }
+                    callMode = AeroState.inCall
+                    track = try {
+                        buildTrack(callMode).also {
+                            it.setVolume(0.85f)
+                            it.play()
+                        }
+                    } catch (t: Throwable) {
+                        Log.e("AeroAudio", "track rebuild failed", t)
+                        break
+                    }
+                }
                 val chunk = queue.poll(200, TimeUnit.MILLISECONDS) ?: continue
                 track.write(chunk, 0, chunk.size)
             }
-            track.stop()
-            track.release()
+            try {
+                track.stop()
+                track.release()
+            } catch (_: Throwable) {
+            }
         }, "audio-player").apply {
             start()
         }

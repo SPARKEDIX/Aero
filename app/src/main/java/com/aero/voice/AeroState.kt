@@ -14,6 +14,10 @@ object AeroState {
     @Volatile
     var sessionActive = false
 
+    /** True while the in-app Aero call UI is active (routes audio to earpiece/speaker). */
+    @Volatile
+    var inCall = false
+
     /** Set while a voice session runs, so the floating service can send frames. */
     @Volatile
     var liveClient: GeminiLiveClient? = null

@@ -107,6 +107,7 @@
             android:launchMode="singleTop"
             android:screenOrientation="portrait"
             android:showWhenLocked="true"
+            android:theme="@style/Theme.AeroVoice.Call"
             android:turnScreenOn="true" />
 
         <receiver
