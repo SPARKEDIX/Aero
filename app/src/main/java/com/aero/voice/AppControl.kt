@@ -136,6 +136,9 @@ object AppControl {
         object DataSettings : Command()
         data class CameraLive(val lens: String) : Command()
         object CameraStop : Command()
+        object VolumeUp : Command()
+        object VolumeDown : Command()
+        data class VolumeSet(val percent: Int) : Command()
     }
 
     private val openRe = Regex(
@@ -244,6 +247,19 @@ object AppControl {
         // Screenshot
         if (Regex("(?i)\\b(screenshot|screen shot|ss lo|photo lo|screenshot lo)\\b").containsMatchIn(t)) {
             return Command.Screenshot
+        }
+
+        // Volume
+        if (Regex("(?i)\\b(volume up|volume badhao|awaz badhao|volume increase)\\b").containsMatchIn(t)) {
+            return Command.VolumeUp
+        }
+        if (Regex("(?i)\\b(volume down|volume kam karo|awaz kam|volume decrease)\\b").containsMatchIn(t)) {
+            return Command.VolumeDown
+        }
+        val vol = Regex("(?i)\\b(volume|awaz|aawaz)\\b.*?([0-9]{1,3})(?:%| percent)?").find(t)
+        if (vol != null) {
+            val raw = vol.groupValues[2].toIntOrNull()
+            if (raw != null) return Command.VolumeSet(raw.coerceIn(0, 100))
         }
 
         // Camera
@@ -366,5 +382,8 @@ object AppControl {
         is Command.DataSettings -> DeviceControl.openDataSettings(ctx)
         is Command.CameraLive -> DeviceActions.cameraLive(ctx, command.lens)
         is Command.CameraStop -> DeviceActions.cameraStop(ctx)
+        is Command.VolumeUp -> DeviceControl.volumeUp(ctx)
+        is Command.VolumeDown -> DeviceControl.volumeDown(ctx)
+        is Command.VolumeSet -> DeviceControl.volume(ctx, command.percent)
     }
 }

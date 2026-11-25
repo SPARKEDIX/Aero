@@ -423,6 +423,24 @@ class GeminiLiveClient(
             }))
         })
 
+        // set_volume
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "set_volume")
+                put("description", "Set media volume. Use 0-100 as percentage.")
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("percent", JSONObject().apply {
+                            put("type", "INTEGER")
+                            put("description", "Volume percentage 0-100.")
+                        })
+                    })
+                    put("required", JSONArray().put("percent"))
+                })
+            }))
+        })
+
         // Read notifications
         arr.put(JSONObject().apply {
             put("functionDeclarations", JSONArray().put(JSONObject().apply {

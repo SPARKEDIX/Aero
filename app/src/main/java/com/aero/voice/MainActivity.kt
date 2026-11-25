@@ -708,6 +708,11 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                             val spoken = DeviceActions.cameraStop(this@MainActivity)
                             ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
                         }
+                        "set_volume" -> {
+                            val percent = call.args.optInt("percent", 50)
+                            val spoken = DeviceControl.volume(this@MainActivity, percent)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
                         "read_notifications" -> {
                             AeroAccessibilityService.requestNotificationsDump { dump ->
                                 pendingNotificationsDump = dump

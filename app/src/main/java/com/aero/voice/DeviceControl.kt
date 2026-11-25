@@ -107,6 +107,49 @@ object DeviceControl {
         }
     }
 
+    // ---- Volume ----
+
+    fun volume(ctx: Context, percent: Int): String {
+        return try {
+            val am = ctx.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+            val max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
+            val target = (max * percent.coerceIn(0, 100) / 100).coerceIn(0, max)
+            am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, target, 0)
+            "Volume set to $percent%."
+        } catch (t: Throwable) {
+            Log.e(TAG, "volume failed", t)
+            "I couldn't change the volume."
+        }
+    }
+
+    fun volumeUp(ctx: Context): String {
+        return try {
+            val am = ctx.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+            am.adjustStreamVolume(
+                android.media.AudioManager.STREAM_MUSIC,
+                android.media.AudioManager.ADJUST_RAISE,
+                android.media.AudioManager.FLAG_SHOW_UI
+            )
+            "Volume up."
+        } catch (t: Throwable) {
+            "I couldn't raise the volume."
+        }
+    }
+
+    fun volumeDown(ctx: Context): String {
+        return try {
+            val am = ctx.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+            am.adjustStreamVolume(
+                android.media.AudioManager.STREAM_MUSIC,
+                android.media.AudioManager.ADJUST_LOWER,
+                android.media.AudioManager.FLAG_SHOW_UI
+            )
+            "Volume down."
+        } catch (t: Throwable) {
+            "I couldn't lower the volume."
+        }
+    }
+
     // ---- WiFi / mobile data: not toggleable by third-party apps ----
 
     fun openWifiSettings(ctx: Context): String {

@@ -191,6 +191,11 @@ class BackgroundSessionService : Service() {
                                 val spoken = DeviceActions.cameraStop(this@BackgroundSessionService)
                                 ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
                             }
+                            "set_volume" -> {
+                                val percent = call.args.optInt("percent", 50)
+                                val spoken = DeviceControl.volume(this@BackgroundSessionService, percent)
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
                             "read_notifications" -> {
                                 AeroAccessibilityService.requestNotificationsDump { dump ->
                                     client?.sendContextText("Notifications: $dump")
