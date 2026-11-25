@@ -174,6 +174,21 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* silent */ }
 
+    private val phonePermissionsLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { _ -> /* silent */ }
+
+    /** Ensures CALL_PHONE + READ_CONTACTS are granted. */
+    private fun ensurePhonePermissions() {
+        val missing = mutableListOf<String>()
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
+            != PackageManager.PERMISSION_GRANTED
+        ) missing.add(Manifest.permission.CALL_PHONE)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS)
+            != PackageManager.PERMISSION_GRANTED
+        ) missing.add(Manifest.permission.READ_CONTACTS)
+        if (missing.isNotEmpty()) phonePermissionsLauncher.launch(missing.toTypedArray())
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -555,11 +570,18 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             }
             return
         }
-        // App-control voice commands ("open whatsapp", "clear recents").
+        // App-control voice commands ("open whatsapp", "clear recents", "call …").
         val cmd = AppControl.parse(text)
         if (cmd != null) {
             Log.d("AeroApp", "app command heard: \"$text\" -> $cmd")
             handler.post {
+                // Call/message commands need phone + contacts permissions.
+                when (cmd) {
+                    is AppControl.Command.Call,
+                    is AppControl.Command.WhatsAppMessage,
+                    is AppControl.Command.WhatsAppCall -> ensurePhonePermissions()
+                    else -> {}
+                }
                 val spoken = AppControl.run(this, cmd)
                 client?.sendContextText("[Action performed] $spoken")
             }
@@ -624,6 +646,45 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                         }
                         "clear_recents" -> {
                             val spoken = AppControl.clearRecents(this@MainActivity)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "make_phone_call" -> {
+                            val target = call.args.optString("target").trim()
+                            val spoken = DeviceActions.call(this@MainActivity, target)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "end_call" -> {
+                            val spoken = DeviceActions.endCall(this@MainActivity)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "send_whatsapp_message" -> {
+                            val target = call.args.optString("target").trim()
+                            val message = call.args.optString("message").trim()
+                            val spoken = DeviceActions.whatsAppMessage(this@MainActivity, target, message)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "whatsapp_call" -> {
+                            val target = call.args.optString("target").trim()
+                            val video = call.args.optBoolean("video", false)
+                            val spoken = DeviceActions.whatsAppCall(this@MainActivity, target, video)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "app_click" -> {
+                            val text = call.args.optString("text").trim()
+                            val spoken = DeviceActions.clickByText(this@MainActivity, text)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "app_type" -> {
+                            val text = call.args.optString("text").trim()
+                            val spoken = DeviceActions.typeText(this@MainActivity, text)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "go_home" -> {
+                            val spoken = DeviceActions.goHome(this@MainActivity)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "go_back" -> {
+                            val spoken = DeviceActions.goBack(this@MainActivity)
                             ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
                         }
                         else -> {

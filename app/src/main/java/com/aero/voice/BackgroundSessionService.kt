@@ -143,6 +143,45 @@ class BackgroundSessionService : Service() {
                                 val spoken = AppControl.clearRecents(this@BackgroundSessionService)
                                 ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
                             }
+                            "make_phone_call" -> {
+                                val target = call.args.optString("target").trim()
+                                val spoken = DeviceActions.call(this@BackgroundSessionService, target)
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
+                            "end_call" -> {
+                                val spoken = DeviceActions.endCall(this@BackgroundSessionService)
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
+                            "send_whatsapp_message" -> {
+                                val target = call.args.optString("target").trim()
+                                val message = call.args.optString("message").trim()
+                                val spoken = DeviceActions.whatsAppMessage(this@BackgroundSessionService, target, message)
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
+                            "whatsapp_call" -> {
+                                val target = call.args.optString("target").trim()
+                                val video = call.args.optBoolean("video", false)
+                                val spoken = DeviceActions.whatsAppCall(this@BackgroundSessionService, target, video)
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
+                            "app_click" -> {
+                                val text = call.args.optString("text").trim()
+                                val spoken = DeviceActions.clickByText(this@BackgroundSessionService, text)
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
+                            "app_type" -> {
+                                val text = call.args.optString("text").trim()
+                                val spoken = DeviceActions.typeText(this@BackgroundSessionService, text)
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
+                            "go_home" -> {
+                                val spoken = DeviceActions.goHome(this@BackgroundSessionService)
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
+                            "go_back" -> {
+                                val spoken = DeviceActions.goBack(this@BackgroundSessionService)
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
                             "web_search" -> ToolResponse(
                                 call.id, call.name,
                                 JSONObject().put("error", "web search not available in background session")

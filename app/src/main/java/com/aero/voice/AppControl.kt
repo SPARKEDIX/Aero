@@ -103,6 +103,14 @@ object AppControl {
         data class Open(val target: String) : Command()
         data class Close(val target: String) : Command()
         object ClearRecents : Command()
+        data class Call(val target: String) : Command()
+        object CutCall : Command()
+        data class WhatsAppMessage(val target: String, val message: String) : Command()
+        data class WhatsAppCall(val target: String, val video: Boolean) : Command()
+        data class Click(val target: String) : Command()
+        data class Type(val target: String) : Command()
+        object Home : Command()
+        object Back : Command()
     }
 
     private val openRe = Regex(
@@ -117,6 +125,33 @@ object AppControl {
     private val recentsRe2 = Regex(
         "(?i)\\b(clear|saaf)\\b.*\\b(recent|recents|overview)\\b"
     )
+    private val cutCallRe = Regex(
+        "(?i)\\b(cut|kato|band|end|disconnect)\\b.*\\b(call|phone|baat)\\b|\\b(call|phone)\\b.*\\b(cut|kato|band|end)\\b"
+    )
+    private val callRe = Regex(
+        "(?i)\\b(call|call karo|ko call karo|phone karo)\\b(.*)"
+    )
+    private val whatsAppMsgRe = Regex(
+        "(?i)\\b(whatsapp|whats app|wa)\\b.*\\b(message|msg|bhejo|send)\\b(.*)"
+    )
+    private val videoCallRe = Regex(
+        "(?i)\\b(video call|video call karo|ko video call)\\b(.*)"
+    )
+    private val voiceCallRe = Regex(
+        "(?i)\\b(voice call|audio call|call karo)\\b(.*)"
+    )
+    private val typeRe = Regex(
+        "(?i)\\b(type|likho|likh|type karo)\\b(.*)"
+    )
+    private val clickRe = Regex(
+        "(?i)\\b(tap|click|dabao|daba|press)\\b(.*)"
+    )
+    private val homeRe = Regex(
+        "(?i)\\b(go home|home\\s*(jao|jayo|karo)|home screen)\\b"
+    )
+    private val backRe = Regex(
+        "(?i)\\b(go back|back karo|waps|wapas|peeche|piche)\\b"
+    )
 
     /** Converts a spoken command to a [Command], or null if not app-related. */
     fun parse(text: String): Command? {
@@ -125,6 +160,64 @@ object AppControl {
 
         if (recentsRe.containsMatchIn(t) || recentsRe2.containsMatchIn(t)) {
             return Command.ClearRecents
+        }
+        if (cutCallRe.containsMatchIn(t)) {
+            return Command.CutCall
+        }
+        if (homeRe.containsMatchIn(t)) {
+            return Command.Home
+        }
+        if (backRe.containsMatchIn(t)) {
+            return Command.Back
+        }
+
+        val whats = whatsAppMsgRe.find(t)
+        if (whats != null) {
+            val rest = whats.groupValues[2].trim()
+            if (rest.isNotEmpty()) {
+                // rest starts with target, message after first comma / "ye"/"ki"/"ko"?
+                val parts = rest.split(Regex("[,،]|\\b(?:ye|ki|ke|ko|that|say|bolo)\\b"), limit = 2)
+                val target = parts.getOrNull(0)?.trim().orEmpty()
+                val message = parts.getOrNull(1)?.trim().orEmpty()
+                if (target.isNotEmpty()) {
+                    return if (message.isNotEmpty()) {
+                        Command.WhatsAppMessage(target, message)
+                    } else {
+                        // fallback: treat whole rest as target, empty message
+                        Command.WhatsAppMessage(target, "")
+                    }
+                }
+            }
+        }
+
+        val video = videoCallRe.find(t)
+        if (video != null) {
+            val target = video.groupValues[1].trim()
+            if (target.isNotEmpty()) return Command.WhatsAppCall(target, video = true)
+        }
+
+        val voice = voiceCallRe.find(t)
+        if (voice != null) {
+            val target = voice.groupValues[1].trim()
+            if (target.isNotEmpty()) return Command.WhatsAppCall(target, video = false)
+        }
+
+        val call = callRe.find(t)
+        if (call != null) {
+            val target = call.groupValues[1].trim().trimStart(' ', 'k', 'o').trim()
+            if (target.isNotEmpty()) return Command.Call(target)
+        }
+
+        val type = typeRe.find(t)
+        if (type != null) {
+            val target = type.groupValues[1].trim()
+            if (target.isNotEmpty()) return Command.Type(target)
+        }
+
+        val click = clickRe.find(t)
+        if (click != null) {
+            val target = click.groupValues[1].trim()
+            if (target.isNotEmpty()) return Command.Click(target)
         }
 
         val open = openRe.find(t)
@@ -149,5 +242,13 @@ object AppControl {
         is Command.Open -> openApp(ctx, command.target)
         is Command.Close -> closeApp(ctx, command.target)
         is Command.ClearRecents -> clearRecents(ctx)
+        is Command.Call -> DeviceActions.call(ctx, command.target)
+        is Command.CutCall -> DeviceActions.endCall(ctx)
+        is Command.WhatsAppMessage -> DeviceActions.whatsAppMessage(ctx, command.target, command.message)
+        is Command.WhatsAppCall -> DeviceActions.whatsAppCall(ctx, command.target, command.video)
+        is Command.Click -> DeviceActions.clickByText(ctx, command.target)
+        is Command.Type -> DeviceActions.typeText(ctx, command.target)
+        is Command.Home -> DeviceActions.goHome(ctx)
+        is Command.Back -> DeviceActions.goBack(ctx)
     }
 }

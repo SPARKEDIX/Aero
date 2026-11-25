@@ -231,6 +231,162 @@ class GeminiLiveClient(
             }))
         })
 
+        // make_phone_call
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "make_phone_call")
+                put(
+                    "description",
+                    "Place a phone call to a contact name or a phone number."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("target", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "Contact name or phone number to call.")
+                        })
+                    })
+                    put("required", JSONArray().put("target"))
+                })
+            }))
+        })
+
+        // end_call
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "end_call")
+                put(
+                    "description",
+                    "End / hang up the currently active phone or WhatsApp call."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject())
+                    put("required", JSONArray())
+                })
+            }))
+        })
+
+        // send_whatsapp_message
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "send_whatsapp_message")
+                put(
+                    "description",
+                    "Open WhatsApp and send a text message to a contact name or phone number."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("target", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "Contact name or phone number.")
+                        })
+                        put("message", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "The message text to send.")
+                        })
+                    })
+                    put("required", JSONArray().put("target").put("message"))
+                })
+            }))
+        })
+
+        // whatsapp_call
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "whatsapp_call")
+                put(
+                    "description",
+                    "Start a WhatsApp voice or video call with a contact name or phone number."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("target", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "Contact name or phone number.")
+                        })
+                        put("video", JSONObject().apply {
+                            put("type", "BOOLEAN")
+                            put("description", "true for video call, false for voice call.")
+                        })
+                    })
+                    put("required", JSONArray().put("target").put("video"))
+                })
+            }))
+        })
+
+        // app_click
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "app_click")
+                put(
+                    "description",
+                    "Tap a button/link/element on the current screen by its visible text. " +
+                        "Use for navigating inside any app (e.g. tap 'Like', tap 'Search', tap 'Next')."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("text", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "Visible text of the element to tap.")
+                        })
+                    })
+                    put("required", JSONArray().put("text"))
+                })
+            }))
+        })
+
+        // app_type
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "app_type")
+                put(
+                    "description",
+                    "Type text into the currently focused input field on screen."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("text", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "Text to type.")
+                        })
+                    })
+                    put("required", JSONArray().put("text"))
+                })
+            }))
+        })
+
+        // go_home
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "go_home")
+                put("description", "Go to the home screen.")
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject())
+                    put("required", JSONArray())
+                })
+            }))
+        })
+
+        // go_back
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "go_back")
+                put("description", "Navigate back one screen.")
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject())
+                    put("required", JSONArray())
+                })
+            }))
+        })
+
         return arr
     }
 
