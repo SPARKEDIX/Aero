@@ -67,7 +67,7 @@ class DeveloperModeActivity : AppCompatActivity() {
             findViewById<TextView>(R.id.devStatus).text = ScreenControl.lock(this)
         }
         findViewById<MaterialButton>(R.id.testUnlockButton).setOnClickListener {
-            findViewById<TextView>(R.id.devStatus).text = ScreenControl.unlock(this)
+            findViewById<TextView>(R.id.devStatus).text = ScreenControl.unlockFromActivity(this)
         }
     }
 
