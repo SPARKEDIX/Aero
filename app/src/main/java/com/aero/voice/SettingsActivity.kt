@@ -122,95 +122,24 @@ class SettingsActivity : AppCompatActivity() {
             requestAssistantRole()
         }
 
-        // ---- Accessibility & Permissions section ----
+        // ---- Accessibility & Permissions: entry → dedicated screen ----
 
-        val permStatus = findViewById<TextView>(R.id.permStatus)
-
-        fun refreshPermStatus() {
-            val a11y = AeroAccessibilityService.isEnabled()
-            val overlay = Settings.canDrawOverlays(this)
-            val write = Settings.System.canWrite(this)
-            val mic = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
-                PackageManager.PERMISSION_GRANTED
-            val cam = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
-                PackageManager.PERMISSION_GRANTED
-            val contacts = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) ==
-                PackageManager.PERMISSION_GRANTED
-            val phone = ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) ==
-                PackageManager.PERMISSION_GRANTED
-            permStatus.text = buildString {
-                appendLine("Accessibility: " + if (a11y) "✓ ON" else "✗ OFF")
-                appendLine("Overlay: " + if (overlay) "✓ ON" else "✗ OFF")
-                appendLine("Modify settings: " + if (write) "✓ ON" else "✗ OFF")
-                appendLine("Microphone: " + if (mic) "✓" else "✗")
-                appendLine("Camera: " + if (cam) "✓" else "✗")
-                appendLine("Contacts: " + if (contacts) "✓" else "✗")
-                appendLine("Phone: " + if (phone) "✓" else "✗")
-            }.trim()
-        }
-
-        findViewById<MaterialButton>(R.id.permAccessibility).setOnClickListener {
-            ScreenShareHelper.openAccessibilitySettings(this)
-        }
-        findViewById<MaterialButton>(R.id.permOverlay).setOnClickListener {
-            ScreenShareHelper.openOverlaySettings(this)
-        }
-        findViewById<MaterialButton>(R.id.permWriteSettings).setOnClickListener {
+        findViewById<MaterialButton>(R.id.permEntryButton).setOnClickListener {
             try {
                 startActivity(
-                    Intent(
-                        Settings.ACTION_MANAGE_WRITE_SETTINGS,
-                        Uri.parse("package:$packageName")
-                    ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-                )
-            } catch (_: Exception) {
-            }
-        }
-        findViewById<MaterialButton>(R.id.permBattery).setOnClickListener {
-            try {
-                startActivity(
-                    Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                    Intent(this, AccessibilityPermissionsActivity::class.java).apply {
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
                 )
             } catch (_: Exception) {
             }
         }
-        findViewById<MaterialButton>(R.id.permRuntime).setOnClickListener {
-            runtimePermLauncher.launch(
-                arrayOf(
-                    Manifest.permission.RECORD_AUDIO,
-                    Manifest.permission.CAMERA,
-                    Manifest.permission.READ_CONTACTS,
-                    Manifest.permission.CALL_PHONE
-                )
-            )
-        }
-        findViewById<MaterialButton>(R.id.permScreen).setOnClickListener {
-            // Launch the system screen-capture consent via the transparent activity.
-            try {
-                startActivity(
-                    Intent(this, ScreenShareConsentActivity::class.java).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                )
-            } catch (_: Exception) {
-            }
-        }
-
-        // Refresh status when returning from system settings/permission dialogs.
-        permStatus.post { refreshPermStatus() }
 
         findViewById<TextView>(R.id.backButton).setOnClickListener { finish() }
     }
 
     // True while we've asked the system to switch the assistant role.
     private var assistantRequestPending = false
-
-    private val runtimePermLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { _ ->
-            // Status refreshes on resume.
-        }
 
     private fun requestAssistantRole() {
         val roleManager = getSystemService(RoleManager::class.java)
@@ -228,28 +157,6 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        findViewById<TextView>(R.id.permStatus)?.let { status ->
-            val a11y = AeroAccessibilityService.isEnabled()
-            val overlay = Settings.canDrawOverlays(this)
-            val write = Settings.System.canWrite(this)
-            val mic = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
-                PackageManager.PERMISSION_GRANTED
-            val cam = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
-                PackageManager.PERMISSION_GRANTED
-            val contacts = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) ==
-                PackageManager.PERMISSION_GRANTED
-            val phone = ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) ==
-                PackageManager.PERMISSION_GRANTED
-            status.text = buildString {
-                appendLine("Accessibility: " + if (a11y) "✓ ON" else "✗ OFF")
-                appendLine("Overlay: " + if (overlay) "✓ ON" else "✗ OFF")
-                appendLine("Modify settings: " + if (write) "✓ ON" else "✗ OFF")
-                appendLine("Microphone: " + if (mic) "✓" else "✗")
-                appendLine("Camera: " + if (cam) "✓" else "✗")
-                appendLine("Contacts: " + if (contacts) "✓" else "✗")
-                appendLine("Phone: " + if (phone) "✓" else "✗")
-            }.trim()
-        }
         if (!assistantRequestPending) return
         assistantRequestPending = false
         val roleManager = getSystemService(RoleManager::class.java)

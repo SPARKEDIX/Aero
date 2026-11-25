@@ -92,6 +92,11 @@
         </service>
 
         <activity
+            android:name=".AccessibilityPermissionsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
             android:name=".SettingsActivity"
             android:exported="false"
             android:screenOrientation="portrait" />

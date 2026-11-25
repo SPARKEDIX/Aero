@@ -42,6 +42,7 @@
     <string name="settings_perm_screen">Enable screen access</string>
     <string name="settings_perm_screen_helper">Needed for screenshots and seeing the screen (accept the consent dialog).</string>
     <string name="settings_perm_status">Status will show here.</string>
+    <string name="settings_perm_open">Open Accessibility &amp; Permissions</string>
     <string name="settings_hotword_label">Wake command</string>
     <string name="settings_hotword_helper">Say this to summon Aero. Always listening while Aero has microphone permission.</string>
     <string name="settings_wake_label">Custom wake command (optional)</string>

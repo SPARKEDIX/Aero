@@ -212,7 +212,7 @@
                 android:textSize="12sp"
                 android:lineSpacingExtra="2dp" />
 
-            <!-- Accessibility & Permissions section -->
+            <!-- Accessibility & Permissions: entry button → dedicated screen -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -232,128 +232,16 @@
                 android:lineSpacingExtra="2dp" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/permAccessibility"
+                android:id="@+id/permEntryButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 app:cornerRadius="12dp"
-                app:backgroundTint="@color/surface2"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
+                app:backgroundTint="@color/orb_purple"
+                android:textColor="@android:color/white"
+                android:textSize="15sp"
                 android:textStyle="bold"
-                android:text="@string/settings_perm_a11y" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_perm_a11y_helper"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/permOverlay"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                app:cornerRadius="12dp"
-                app:backgroundTint="@color/surface2"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:text="@string/settings_perm_overlay" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_perm_overlay_helper"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/permWriteSettings"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                app:cornerRadius="12dp"
-                app:backgroundTint="@color/surface2"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:text="@string/settings_perm_write" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_perm_write_helper"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/permBattery"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                app:cornerRadius="12dp"
-                app:backgroundTint="@color/surface2"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:text="@string/settings_perm_battery" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_perm_battery_helper"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/permRuntime"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                app:cornerRadius="12dp"
-                app:backgroundTint="@color/surface2"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:text="@string/settings_perm_runtime" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_perm_runtime_helper"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/permScreen"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                app:cornerRadius="12dp"
-                app:backgroundTint="@color/surface2"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:text="@string/settings_perm_screen" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_perm_screen_helper"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
-
-            <TextView
-                android:id="@+id/permStatus"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:text="@string/settings_perm_status"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                android:lineSpacingExtra="2dp" />
+                android:text="@string/settings_perm_open" />
 
             <TextView
                 android:id="@+id/settingsStatus"
