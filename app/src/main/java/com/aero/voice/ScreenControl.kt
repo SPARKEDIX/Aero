@@ -141,11 +141,11 @@ object ScreenControl {
         }
 
         // Normal Device Admin (not owner): Android doesn't allow auto keyguard
-        // disable. Best we can do is open the credential screen — user enters
-        // PIN/pattern once (or swipe if none).
-        return "Aero Device Owner nahi hai, isliye auto keyguard bypass nahi ho sakta. " +
-            "Lock screen khol diya — PIN/pattern daal do. " +
-            "Full auto-unlock ke liye PC se chalao: ${deviceOwnerCommand()}"
+        // disable. We still open the system credential screen via
+        // requestDismissKeyguard (from unlockFromActivity) so the user just
+        // enters PIN/pattern — the only way Android allows.
+        return "Aero Device Owner nahi hai (is phone par multiple users hain), isliye full-auto bypass nahi ho sakta. " +
+            "Lock screen khol diya — bas PIN/pattern daal do."
     }
 
     /** Unlock from an Activity context — also dismisses any visible keyguard UI. */

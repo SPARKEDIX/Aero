@@ -93,11 +93,12 @@ class DeveloperModeActivity : AppCompatActivity() {
         val status = findViewById<TextView>(R.id.adminStatus)
         val hint = findViewById<TextView>(R.id.ownerHint)
         if (ScreenControl.isAdmin(this)) {
-            status.text = "✓ Device Admin ACTIVE — lock ready hai."
+            status.text = "✓ Device Admin ACTIVE — LOCK ready hai."
             if (ScreenControl.isDeviceOwner(this)) {
                 hint.text = "★ Device Owner — auto-unlock bhi ready hai (60s keyguard bypass)."
             } else {
-                hint.text = "Auto-unlock sirf Device Owner se chalta hai. USB/PC se adb chalao (neeche button) — ya PIN manually daalo."
+                hint.text = "Unlock: is phone par multiple users hain, isliye Device Owner nahi bana sakte (Android limit). " +
+                    "To bhi unlock kaam karega — Aero system ke lock screen ko khol dega, bas PIN/pattern daal do (1 tap)."
             }
         } else {
             status.text = "✗ Device Admin nahi hai — Enable dabao."
