@@ -1,5 +1,6 @@
 package com.aero.voice
 
+import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
@@ -54,19 +55,23 @@ class AudioPlayer {
         if (running.getAndSet(true)) return
         thread = Thread({
             var callMode = AeroState.inCall
+            var routeRev = AeroState.audioRoute
             var track = buildTrack(callMode)
             // Moderate volume reduces speaker->mic leakage to the assistant.
             track.setVolume(0.85f)
             track.play()
             while (running.get()) {
-                // Switch routing when a call starts/ends mid-session.
-                if (callMode != AeroState.inCall) {
+                // Rebuild the track when the audio mode or the speaker routing
+                // changes (routing only applies to a freshly created track).
+                if (callMode != AeroState.inCall || routeRev != AeroState.audioRoute) {
                     try {
                         track.stop()
                         track.release()
                     } catch (_: Throwable) {
                     }
                     callMode = AeroState.inCall
+                    routeRev = AeroState.audioRoute
+                    Log.d("AeroAudio", "track rebuilt (call=$callMode route=$routeRev)")
                     track = try {
                         buildTrack(callMode).also {
                             it.setVolume(0.85f)

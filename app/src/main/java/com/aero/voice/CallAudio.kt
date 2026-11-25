@@ -22,7 +22,8 @@ object CallAudio {
             am.mode = AudioManager.MODE_IN_COMMUNICATION
             @Suppress("DEPRECATION")
             am.isSpeakerphoneOn = false
-            Log.d(TAG, "call audio: earpiece")
+            AeroState.audioRoute++
+            Log.d(TAG, "call audio: earpiece (route rev ${AeroState.audioRoute})")
         } catch (t: Throwable) {
             Log.w(TAG, "enterCall failed", t)
         }
@@ -39,7 +40,8 @@ object CallAudio {
             if (am.mode != AudioManager.MODE_IN_COMMUNICATION) {
                 am.mode = AudioManager.MODE_IN_COMMUNICATION
             }
-            Log.d(TAG, "call audio: ${if (on) "speaker" else "earpiece"}")
+            AeroState.audioRoute++
+            Log.d(TAG, "call audio: ${if (on) "speaker" else "earpiece"} (route rev ${AeroState.audioRoute})")
         } catch (t: Throwable) {
             Log.w(TAG, "setSpeaker failed", t)
         }
@@ -55,7 +57,8 @@ object CallAudio {
             @Suppress("DEPRECATION")
             am.mode = AudioManager.MODE_NORMAL
             manager = null
-            Log.d(TAG, "call audio: normal mode")
+            AeroState.audioRoute++
+            Log.d(TAG, "call audio: normal mode (route rev ${AeroState.audioRoute})")
         } catch (_: Throwable) {
         }
     }
