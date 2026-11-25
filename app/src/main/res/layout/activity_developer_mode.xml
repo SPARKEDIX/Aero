@@ -109,6 +109,26 @@
                 android:textSize="13sp"
                 android:textStyle="bold" />
 
+            <TextView
+                android:id="@+id/ownerHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:lineSpacingExtra="2dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/copyAdbButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                app:cornerRadius="12dp"
+                app:backgroundTint="#1F2937"
+                android:text="Copy adb Device-Owner Command"
+                android:textColor="@android:color/white"
+                android:textSize="14sp" />
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/enableAdminButton"
                 android:layout_width="match_parent"

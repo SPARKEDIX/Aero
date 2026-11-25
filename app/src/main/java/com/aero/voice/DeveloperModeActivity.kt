@@ -43,6 +43,13 @@ class DeveloperModeActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.enableAdminButton).setOnClickListener {
             ScreenControl.openAdminSettings(this)
         }
+        findViewById<MaterialButton>(R.id.copyAdbButton).setOnClickListener {
+            val cmd = ScreenControl.deviceOwnerCommand()
+            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("adb", cmd))
+            findViewById<TextView>(R.id.devStatus).text =
+                "Command copy ho gayi. USB se PC se jodo aur chalao:\n$cmd"
+        }
 
         // ---- Saved credentials ----
         val pinInput = findViewById<EditText>(R.id.pinInput)
@@ -84,10 +91,17 @@ class DeveloperModeActivity : AppCompatActivity() {
 
     private fun refreshAdminStatus() {
         val status = findViewById<TextView>(R.id.adminStatus)
+        val hint = findViewById<TextView>(R.id.ownerHint)
         if (ScreenControl.isAdmin(this)) {
-            status.text = "✓ Device Admin ACTIVE — lock/unlock ready hai."
+            status.text = "✓ Device Admin ACTIVE — lock ready hai."
+            if (ScreenControl.isDeviceOwner(this)) {
+                hint.text = "★ Device Owner — auto-unlock bhi ready hai (60s keyguard bypass)."
+            } else {
+                hint.text = "Auto-unlock sirf Device Owner se chalta hai. USB/PC se adb chalao (neeche button) — ya PIN manually daalo."
+            }
         } else {
             status.text = "✗ Device Admin nahi hai — Enable dabao."
+            hint.text = ""
         }
     }
 
