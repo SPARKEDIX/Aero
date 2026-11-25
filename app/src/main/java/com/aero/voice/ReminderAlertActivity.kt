@@ -1,7 +1,5 @@
 package com.aero.voice
 
-import android.animation.ObjectAnimator
-import android.animation.PropertyValuesHolder
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
@@ -42,7 +40,6 @@ class ReminderAlertActivity : ComponentActivity() {
     private var callSeconds = 0
 
     private var player: MediaPlayer? = null
-    private var pulse: ObjectAnimator? = null
 
     private val handler = Handler(Looper.getMainLooper())
 
@@ -107,7 +104,6 @@ class ReminderAlertActivity : ComponentActivity() {
         findViewById<ImageButton>(R.id.btnMute).setOnClickListener { toggleMute() }
         findViewById<ImageButton>(R.id.btnReminder).setOnClickListener { askForReminder() }
 
-        startPulse()
         startRinging()
         handler.postDelayed(retryRunnable, 60_000L)
     }
@@ -122,26 +118,6 @@ class ReminderAlertActivity : ComponentActivity() {
     }
 
     // ---------------- incoming ----------------
-
-    private fun startPulse() {
-        val avatar = findViewById<View>(R.id.avatarPulse)
-        pulse = ObjectAnimator.ofPropertyValuesHolder(
-            avatar,
-            PropertyValuesHolder.ofFloat(View.ALPHA, 0.35f, 0.06f),
-            PropertyValuesHolder.ofFloat(View.SCALE_X, 0.92f, 1.18f),
-            PropertyValuesHolder.ofFloat(View.SCALE_Y, 0.92f, 1.18f)
-        ).apply {
-            duration = 1500L
-            repeatCount = ObjectAnimator.INFINITE
-            repeatMode = ObjectAnimator.REVERSE
-            start()
-        }
-    }
-
-    private fun stopPulse() {
-        pulse?.cancel()
-        pulse = null
-    }
 
     private fun startRinging() {
         ringing = true
@@ -196,7 +172,6 @@ class ReminderAlertActivity : ComponentActivity() {
     private fun answer() {
         if (inCall) return
         stopRinging()
-        stopPulse()
         ReminderNotifier.cancel(this, reminderId)
         Log.d(TAG, "call answered: $message")
 
@@ -333,7 +308,6 @@ class ReminderAlertActivity : ComponentActivity() {
 
     override fun onDestroy() {
         stopRinging()
-        stopPulse()
         handler.removeCallbacks(timerRunnable)
         ReminderNotifier.cancel(this, reminderId)
         if (inCall) CallAudio.exitCall(this)

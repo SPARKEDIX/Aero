@@ -5,41 +5,29 @@
     android:background="@drawable/bg_call_screen"
     android:fitsSystemWindows="true">
 
-    <!-- ================= INCOMING CALL ================= -->
+    <!-- ================= INCOMING CALL (real dialer style) ================= -->
     <LinearLayout
         android:id="@+id/incomingGroup"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:gravity="center"
+        android:layout_gravity="center"
+        android:gravity="center_horizontal"
         android:orientation="vertical"
-        android:paddingStart="28dp"
-        android:paddingEnd="28dp">
+        android:paddingStart="32dp"
+        android:paddingEnd="32dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:letterSpacing="0.14"
-            android:text="INCOMING AERO CALL"
-            android:textColor="#99FFFFFF"
-            android:textSize="12sp" />
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
         <FrameLayout
-            android:layout_width="200dp"
-            android:layout_height="200dp"
-            android:layout_marginTop="18dp">
+            android:layout_width="100dp"
+            android:layout_height="100dp">
 
             <View
-                android:id="@+id/avatarPulse"
-                android:layout_width="168dp"
-                android:layout_height="168dp"
-                android:layout_gravity="center"
-                android:alpha="0.35"
-                android:background="@drawable/bg_call_avatar" />
-
-            <View
-                android:layout_width="168dp"
-                android:layout_height="168dp"
-                android:layout_gravity="center"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
                 android:background="@drawable/bg_call_avatar" />
 
             <TextView
@@ -47,46 +35,54 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:text="A"
-                android:textColor="#FFFFFFFF"
-                android:textSize="62sp"
-                android:textStyle="bold" />
+                android:textColor="#E6EBF2"
+                android:textSize="42sp"
+                android:textStyle="normal" />
         </FrameLayout>
 
         <TextView
             android:id="@+id/reminderTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
+            android:layout_marginTop="22dp"
+            android:fontFamily="sans-serif-medium"
             android:text="Aero"
             android:textColor="#FFFFFFFF"
-            android:textSize="34sp"
-            android:textStyle="bold" />
+            android:textSize="30sp" />
 
         <TextView
             android:id="@+id/reminderSub"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:text="Incoming call…"
-            android:textColor="#B3FFFFFF"
-            android:textSize="14sp" />
+            android:fontFamily="sans-serif"
+            android:letterSpacing="0.04"
+            android:text="Incoming call"
+            android:textColor="#96A2B3"
+            android:textSize="15sp" />
 
         <TextView
             android:id="@+id/reminderMessage"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:gravity="center"
-            android:maxLines="4"
+            android:layout_marginTop="16dp"
             android:ellipsize="end"
+            android:fontFamily="sans-serif"
+            android:gravity="center"
+            android:maxLines="2"
             android:text=""
-            android:textColor="#E6FFFFFF"
-            android:textSize="17sp" />
+            android:textColor="#C6CFDA"
+            android:textSize="15sp" />
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="56dp"
+            android:layout_marginBottom="44dp"
             android:gravity="center"
             android:orientation="horizontal">
 
@@ -98,21 +94,22 @@
 
                 <ImageButton
                     android:id="@+id/reminderClose"
-                    android:layout_width="76dp"
-                    android:layout_height="76dp"
+                    android:layout_width="84dp"
+                    android:layout_height="84dp"
                     android:background="@drawable/bg_round_red"
                     android:contentDescription="Decline call"
-                    android:padding="20dp"
+                    android:padding="22dp"
                     android:scaleType="centerInside"
                     android:src="@drawable/ic_phone_down" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
+                    android:layout_marginTop="12dp"
+                    android:fontFamily="sans-serif"
                     android:text="Decline"
-                    android:textColor="#CCFFFFFF"
-                    android:textSize="12sp" />
+                    android:textColor="#9AA5B4"
+                    android:textSize="13sp" />
             </LinearLayout>
 
             <Space
@@ -127,63 +124,50 @@
 
                 <ImageButton
                     android:id="@+id/reminderAnswer"
-                    android:layout_width="76dp"
-                    android:layout_height="76dp"
+                    android:layout_width="84dp"
+                    android:layout_height="84dp"
                     android:background="@drawable/bg_round_green"
                     android:contentDescription="Answer call"
-                    android:padding="20dp"
+                    android:padding="22dp"
                     android:scaleType="centerInside"
                     android:src="@drawable/ic_phone" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
+                    android:layout_marginTop="12dp"
+                    android:fontFamily="sans-serif"
                     android:text="Answer"
-                    android:textColor="#CCFFFFFF"
-                    android:textSize="12sp" />
+                    android:textColor="#9AA5B4"
+                    android:textSize="13sp" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 
-    <!-- ================= IN CALL ================= -->
+    <!-- ================= IN CALL (real dialer style) ================= -->
     <LinearLayout
         android:id="@+id/inCallGroup"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:gravity="center"
+        android:layout_gravity="center"
+        android:gravity="center_horizontal"
         android:orientation="vertical"
-        android:paddingStart="24dp"
-        android:paddingEnd="24dp"
+        android:paddingStart="28dp"
+        android:paddingEnd="28dp"
         android:visibility="gone">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Aero"
-            android:textColor="#FFFFFFFF"
-            android:textSize="26sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/callTimer"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:letterSpacing="0.08"
-            android:text="00:00"
-            android:textColor="#B3FFFFFF"
-            android:textSize="15sp" />
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
         <FrameLayout
-            android:layout_width="164dp"
-            android:layout_height="164dp"
-            android:layout_marginTop="20dp">
+            android:layout_width="84dp"
+            android:layout_height="84dp">
 
             <View
-                android:layout_width="132dp"
-                android:layout_height="132dp"
-                android:layout_gravity="center"
+                android:layout_width="84dp"
+                android:layout_height="84dp"
                 android:background="@drawable/bg_call_avatar" />
 
             <TextView
@@ -191,10 +175,30 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:text="A"
-                android:textColor="#FFFFFFFF"
-                android:textSize="50sp"
-                android:textStyle="bold" />
+                android:textColor="#E6EBF2"
+                android:textSize="34sp" />
         </FrameLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:fontFamily="sans-serif-medium"
+            android:text="Aero"
+            android:textColor="#FFFFFFFF"
+            android:textSize="24sp" />
+
+        <TextView
+            android:id="@+id/callTimer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:fontFamily="sans-serif"
+            android:letterSpacing="0.1"
+            android:text="00:00"
+            android:textColor="#96A2B3"
+            android:textSize="15sp"
+            android:textStyle="normal" />
 
         <TextView
             android:id="@+id/callMessage"
@@ -202,16 +206,21 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
             android:ellipsize="end"
+            android:fontFamily="sans-serif"
             android:gravity="center"
-            android:maxLines="2"
+            android:maxLines="1"
             android:text=""
-            android:textColor="#D9FFFFFF"
-            android:textSize="15sp" />
+            android:textColor="#8B97A8"
+            android:textSize="14sp" />
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="30dp"
             android:gravity="center"
             android:orientation="horizontal">
 
@@ -223,11 +232,11 @@
 
                 <ImageButton
                     android:id="@+id/btnSpeaker"
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
+                    android:layout_width="68dp"
+                    android:layout_height="68dp"
                     android:background="@drawable/bg_call_button"
                     android:contentDescription="Speaker"
-                    android:padding="17dp"
+                    android:padding="19dp"
                     android:scaleType="centerInside"
                     android:src="@drawable/ic_speaker" />
 
@@ -235,26 +244,27 @@
                     android:id="@+id/labelSpeaker"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="9dp"
+                    android:fontFamily="sans-serif"
                     android:text="Speaker"
-                    android:textColor="#CCFFFFFF"
+                    android:textColor="#9AA5B4"
                     android:textSize="12sp" />
             </LinearLayout>
 
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="26dp"
+                android:layout_marginStart="30dp"
                 android:gravity="center"
                 android:orientation="vertical">
 
                 <ImageButton
                     android:id="@+id/btnMute"
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
+                    android:layout_width="68dp"
+                    android:layout_height="68dp"
                     android:background="@drawable/bg_call_button"
                     android:contentDescription="Mute microphone"
-                    android:padding="17dp"
+                    android:padding="19dp"
                     android:scaleType="centerInside"
                     android:src="@drawable/ic_mic_off" />
 
@@ -262,26 +272,27 @@
                     android:id="@+id/labelMute"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="9dp"
+                    android:fontFamily="sans-serif"
                     android:text="Mute"
-                    android:textColor="#CCFFFFFF"
+                    android:textColor="#9AA5B4"
                     android:textSize="12sp" />
             </LinearLayout>
 
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="26dp"
+                android:layout_marginStart="30dp"
                 android:gravity="center"
                 android:orientation="vertical">
 
                 <ImageButton
                     android:id="@+id/btnReminder"
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
+                    android:layout_width="68dp"
+                    android:layout_height="68dp"
                     android:background="@drawable/bg_call_button"
                     android:contentDescription="Set a reminder"
-                    android:padding="17dp"
+                    android:padding="19dp"
                     android:scaleType="centerInside"
                     android:src="@drawable/ic_alarm" />
 
@@ -289,47 +300,50 @@
                     android:id="@+id/labelReminder"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="9dp"
+                    android:fontFamily="sans-serif"
                     android:text="Reminder"
-                    android:textColor="#CCFFFFFF"
+                    android:textColor="#9AA5B4"
                     android:textSize="12sp" />
             </LinearLayout>
         </LinearLayout>
 
+        <TextView
+            android:id="@+id/callHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:fontFamily="sans-serif"
+            android:text="Seedha bolo — jaise &quot;5 baje ki reminder laga do&quot;"
+            android:textColor="#5F6B7C"
+            android:textSize="12sp" />
+
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="26dp"
+            android:layout_marginTop="22dp"
+            android:layout_marginBottom="40dp"
             android:gravity="center"
             android:orientation="vertical">
 
             <ImageButton
                 android:id="@+id/btnEnd"
-                android:layout_width="76dp"
-                android:layout_height="76dp"
+                android:layout_width="84dp"
+                android:layout_height="84dp"
                 android:background="@drawable/bg_round_red"
                 android:contentDescription="End call"
-                android:padding="20dp"
+                android:padding="22dp"
                 android:scaleType="centerInside"
                 android:src="@drawable/ic_phone_down" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="12dp"
+                android:fontFamily="sans-serif"
                 android:text="End call"
-                android:textColor="#CCFFFFFF"
-                android:textSize="12sp" />
+                android:textColor="#9AA5B4"
+                android:textSize="13sp" />
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/callHint"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:gravity="center"
-            android:text="Seedha bolo — jaise &quot;5 baje ki reminder laga do&quot;"
-            android:textColor="#80FFFFFF"
-            android:textSize="12sp" />
     </LinearLayout>
 </FrameLayout>

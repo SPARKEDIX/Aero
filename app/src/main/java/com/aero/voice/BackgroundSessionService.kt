@@ -246,7 +246,7 @@ class BackgroundSessionService : Service() {
                                 ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
                             }
                             "remember_fact", "forget_fact", "recall_memory",
-                            "set_reminder", "call_me" -> {
+                            "set_reminder", "call_me", "get_current_time" -> {
                                 AeroTools.handle(this@BackgroundSessionService, call)
                                     ?: ToolResponse(
                                         call.id, call.name,

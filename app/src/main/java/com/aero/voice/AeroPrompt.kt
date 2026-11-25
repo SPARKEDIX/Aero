@@ -1,17 +1,14 @@
 package com.aero.voice
 
 import android.content.Context
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 /**
  * Builds the final system instruction for every live session:
- * base mood prompt + current date/time + long-term memory + tool rules.
+ * base mood prompt + current date/time (device timezone) + long-term memory
+ * + tool rules.
  */
 object AeroPrompt {
-
-    private val dateFmt = SimpleDateFormat("EEEE, d MMMM yyyy, h:mm a", Locale.getDefault())
 
     private const val TOOL_RULES = """
 TOOLS YOU MUST USE (never refuse these):
@@ -23,16 +20,18 @@ TOOLS YOU MUST USE (never refuse these):
 
 LANGUAGE (STRICT): Always reply in Hindi or Hinglish (Roman Hindi). Never answer in English-only, even if the user speaks English. Technical words may stay English.
 Current date/time: %s
+Device timezone: %s (always use the phone's own timezone for anything time-related).
 Keep replies short and natural for voice.
     """
 
     fun build(ctx: Context, baseInstruction: String): String {
-        val now = dateFmt.format(Date())
+        val now = TimeUtil.nowHuman()
+        val tz = TimeUtil.tzId()
         val memory = MemoryStore.promptBlock(ctx)
         return buildString {
             append(baseInstruction)
             append("\n\n")
-            append(TOOL_RULES.format(now))
+            append(TOOL_RULES.format(now, tz))
             if (memory.isNotEmpty()) {
                 append("\n\n")
                 append(memory)
@@ -41,5 +40,5 @@ Keep replies short and natural for voice.
     }
 
     /** Small clock block for mid-session context updates. */
-    fun nowLine(): String = "Current date/time: " + dateFmt.format(Date())
+    fun nowLine(): String = "Current date/time: " + TimeUtil.nowHuman() + " (" + TimeUtil.tzId() + ")"
 }

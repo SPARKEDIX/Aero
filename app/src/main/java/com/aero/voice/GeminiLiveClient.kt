@@ -582,6 +582,23 @@ class GeminiLiveClient(
             }))
         })
 
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "get_current_time")
+                put(
+                    "description",
+                    "Return the current date, time and timezone from the user's phone. " +
+                        "Use whenever the user asks what time/date it is, or needs a precise " +
+                        "time (e.g. for a reminder). Timezone is the phone's own."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject())
+                    put("required", JSONArray())
+                })
+            }))
+        })
+
         // ---- long-term memory ----
         arr.put(JSONObject().apply {
             put("functionDeclarations", JSONArray().put(JSONObject().apply {

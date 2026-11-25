@@ -44,6 +44,14 @@ object AeroTools {
             JSONObject().put("memory", MemoryStore.promptBlock(ctx).ifEmpty { "No saved memories yet." })
         )
 
+        "get_current_time" -> ToolResponse(
+            call.id, call.name,
+            JSONObject()
+                .put("time", TimeUtil.nowIso())
+                .put("timezone", TimeUtil.tzId())
+                .put("human", TimeUtil.nowHuman())
+        )
+
         "set_reminder" -> {
             val whenText = call.args.optString("when").trim()
             val message = call.args.optString("message").trim().ifBlank { "Reminder" }
