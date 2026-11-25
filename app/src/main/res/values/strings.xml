@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Aero Voice</string>
+    <string name="app_name">Aero</string>
     <string name="settings_desc">Settings</string>
     <string name="mic_desc">Talk</string>
     <string name="screen_share_desc">Share screen</string>
