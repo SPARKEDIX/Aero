@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Aero Voice</string>
+    <string name="app_name">Aero</string>
     <string name="settings_desc">Settings</string>
     <string name="mic_desc">Talk</string>
     <string name="screen_share_desc">Share screen</string>
@@ -26,6 +26,23 @@
     <string name="settings_save">Save</string>
     <string name="settings_assistant_button">Set Aero as default assistant</string>
     <string name="settings_assistant_helper">Replaces the current digital assistant (e.g. Gemini) with Aero when you hold the Home button / use the assistant gesture.</string>
+    <string name="accessibility_service_desc">Lets Aero open the recent apps screen and clear it when you ask. Also used to help control apps.</string>
+    <string name="settings_perm_title">Accessibility &amp; Permissions</string>
+    <string name="settings_perm_helper">Enable these so Aero can control apps, see the screen, and do tasks for you.</string>
+    <string name="settings_perm_a11y">Enable Accessibility Service</string>
+    <string name="settings_perm_a11y_helper">Needed for taps, typing, scrolling, clearing notifications/recents, ending calls.</string>
+    <string name="settings_perm_overlay">Allow display over other apps</string>
+    <string name="settings_perm_overlay_helper">Needed for the floating orb (mini ball) when Aero is in the background.</string>
+    <string name="settings_perm_write">Allow modify system settings</string>
+    <string name="settings_perm_write_helper">Needed for brightness control.</string>
+    <string name="settings_perm_battery">Ignore battery optimization</string>
+    <string name="settings_perm_battery_helper">Prevents Android from killing Aero in the background.</string>
+    <string name="settings_perm_runtime">Grant essential permissions</string>
+    <string name="settings_perm_runtime_helper">Microphone, Camera, Contacts and Phone — needed for voice, camera vision, calls and WhatsApp.</string>
+    <string name="settings_perm_screen">Enable screen access</string>
+    <string name="settings_perm_screen_helper">Needed for screenshots and seeing the screen (accept the consent dialog).</string>
+    <string name="settings_perm_status">Status will show here.</string>
+    <string name="settings_perm_open">Open Accessibility &amp; Permissions</string>
     <string name="settings_hotword_label">Wake command</string>
     <string name="settings_hotword_helper">Say this to summon Aero. Always listening while Aero has microphone permission.</string>
     <string name="settings_wake_label">Custom wake command (optional)</string>

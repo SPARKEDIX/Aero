@@ -157,6 +157,9 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     /** True while the screen picker was opened from the floating orb. */
     private var launchedFromOrb = false
 
+    /** Temporary holder for a notifications dump fetched during a tool call. */
+    private var pendingNotificationsDump: String? = null
+
     /** Fired by the floating orb's close button to force a full exit. */
     private val exitReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -173,6 +176,21 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* silent */ }
+
+    private val phonePermissionsLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { _ -> /* silent */ }
+
+    /** Ensures CALL_PHONE + READ_CONTACTS are granted. */
+    private fun ensurePhonePermissions() {
+        val missing = mutableListOf<String>()
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
+            != PackageManager.PERMISSION_GRANTED
+        ) missing.add(Manifest.permission.CALL_PHONE)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS)
+            != PackageManager.PERMISSION_GRANTED
+        ) missing.add(Manifest.permission.READ_CONTACTS)
+        if (missing.isNotEmpty()) phonePermissionsLauncher.launch(missing.toTypedArray())
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -293,10 +311,19 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             FloatingOrbService.ACTION_OPEN_CAMERA -> {
                 stopFloatingOrb()
                 stopProjection()
+                val lens = intent.getStringExtra(EXTRA_LENS)
+                if (lens != null) {
+                    lensFacing = if (lens.equals("front", ignoreCase = true)) {
+                        CameraSelector.LENS_FACING_FRONT
+                    } else {
+                        CameraSelector.LENS_FACING_BACK
+                    }
+                }
+                val turnOn = intent.getBooleanExtra(EXTRA_CAMERA_ON, true)
                 if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                     == PackageManager.PERMISSION_GRANTED
                 ) {
-                    toggleCameraLive()
+                    if (turnOn) openCameraLive() else closeCameraLive()
                 } else {
                     cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                 }
@@ -374,7 +401,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             key,
             Prefs.modelId(this),
             Prefs.voice(this),
-            mood.instruction,
+            AeroPrompt.build(this, mood.instruction),
             this
         ).also { it.connect() }
         // MUST set after client is created so screen-share frames can reach it.
@@ -553,6 +580,23 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                 stopProjection()
                 stopFloatingOrb()
             }
+            return
+        }
+        // App-control voice commands ("open whatsapp", "clear recents", "call …").
+        val cmd = AppControl.parse(text)
+        if (cmd != null) {
+            Log.d("AeroApp", "app command heard: \"$text\" -> $cmd")
+            handler.post {
+                // Call/message commands need phone + contacts permissions.
+                when (cmd) {
+                    is AppControl.Command.Call,
+                    is AppControl.Command.WhatsAppMessage,
+                    is AppControl.Command.WhatsAppCall -> ensurePhonePermissions()
+                    else -> {}
+                }
+                val spoken = AppControl.run(this, cmd)
+                client?.sendContextText("[Action performed] $spoken")
+            }
         }
     }
 
@@ -589,17 +633,157 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             // then their responses are sent together.
             val responses = calls.map { call ->
                 async {
-                    val query = call.args.optString("query").trim()
-                    val result = if (query.isEmpty()) {
-                        JSONObject().put("error", "empty search query")
-                    } else {
-                        try {
-                            searchOrchestrator.search(query).toJson()
-                        } catch (t: Throwable) {
-                            JSONObject().put("error", t.message ?: "search failed")
+                    when (call.name) {
+                        "web_search" -> {
+                            val query = call.args.optString("query").trim()
+                            val result = if (query.isEmpty()) {
+                                JSONObject().put("error", "empty search query")
+                            } else {
+                                try {
+                                    searchOrchestrator.search(query).toJson()
+                                } catch (t: Throwable) {
+                                    JSONObject().put("error", t.message ?: "search failed")
+                                }
+                            }
+                            ToolResponse(call.id, call.name, result)
+                        }
+                        "open_app", "close_app" -> {
+                            val appName = call.args.optString("app_name").trim()
+                            val spoken = if (call.name == "open_app") {
+                                AppControl.openApp(this@MainActivity, appName)
+                            } else {
+                                AppControl.closeApp(this@MainActivity, appName)
+                            }
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "clear_recents" -> {
+                            val spoken = AppControl.clearRecents(this@MainActivity)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "make_phone_call" -> {
+                            val target = call.args.optString("target").trim()
+                            val spoken = DeviceActions.call(this@MainActivity, target)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "end_call" -> {
+                            val spoken = DeviceActions.endCall(this@MainActivity)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "send_whatsapp_message" -> {
+                            val target = call.args.optString("target").trim()
+                            val message = call.args.optString("message").trim()
+                            val spoken = DeviceActions.whatsAppMessage(this@MainActivity, target, message)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "whatsapp_call" -> {
+                            val target = call.args.optString("target").trim()
+                            val video = call.args.optBoolean("video", false)
+                            val spoken = DeviceActions.whatsAppCall(this@MainActivity, target, video)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "app_click" -> {
+                            val text = call.args.optString("text").trim()
+                            val spoken = DeviceActions.clickByText(this@MainActivity, text)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "app_type" -> {
+                            val text = call.args.optString("text").trim()
+                            val spoken = DeviceActions.typeText(this@MainActivity, text)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "go_home" -> {
+                            val spoken = DeviceActions.goHome(this@MainActivity)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "go_back" -> {
+                            val spoken = DeviceActions.goBack(this@MainActivity)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "camera_live" -> {
+                            val lens = call.args.optString("lens", "back").trim()
+                            val spoken = DeviceActions.cameraLive(this@MainActivity, lens)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "camera_stop" -> {
+                            val spoken = DeviceActions.cameraStop(this@MainActivity)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "set_volume" -> {
+                            val percent = call.args.optInt("percent", 50)
+                            val spoken = DeviceControl.volume(this@MainActivity, percent)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "read_notifications" -> {
+                            AeroAccessibilityService.requestNotificationsDump { dump ->
+                                pendingNotificationsDump = dump
+                            }
+                            // Feed the dump after this batch responds.
+                            handler.postDelayed({
+                                pendingNotificationsDump?.let {
+                                    client?.sendContextText("Notifications: $it")
+                                    pendingNotificationsDump = null
+                                }
+                            }, 1500L)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", "reading notifications"))
+                        }
+                        "clear_notifications" -> {
+                            val spoken = if (AeroAccessibilityService.requestClearNotifications()) {
+                                "clearing notifications"
+                            } else {
+                                "accessibility not enabled"
+                            }
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "scroll_down" -> {
+                            val spoken = if (AeroAccessibilityService.requestScroll(true)) "scrolling down" else "accessibility not enabled"
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "scroll_up" -> {
+                            val spoken = if (AeroAccessibilityService.requestScroll(false)) "scrolling up" else "accessibility not enabled"
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "torch_set" -> {
+                            val on = call.args.optBoolean("on", true)
+                            val spoken = DeviceControl.torch(this@MainActivity, on)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "bluetooth_set" -> {
+                            val on = call.args.optBoolean("on", true)
+                            val spoken = DeviceControl.bluetooth(this@MainActivity, on)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "set_brightness" -> {
+                            val percent = call.args.optInt("percent", 50)
+                            val spoken = DeviceControl.brightness(this@MainActivity, percent * 255 / 100)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "take_screenshot" -> {
+                            val spoken = DeviceControl.screenshot(this@MainActivity)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "open_wifi_settings" -> {
+                            val spoken = DeviceControl.openWifiSettings(this@MainActivity)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "open_data_settings" -> {
+                            val spoken = DeviceControl.openDataSettings(this@MainActivity)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "remember_fact", "forget_fact", "recall_memory",
+                        "set_reminder", "call_me", "get_current_time" -> {
+                            AeroTools.handle(this@MainActivity, call)
+                                ?: ToolResponse(
+                                    call.id, call.name,
+                                    JSONObject().put("error", "unknown tool ${call.name}")
+                                )
+                        }
+                        else -> {
+                            ToolResponse(
+                                call.id, call.name,
+                                JSONObject().put("error", "unknown tool ${call.name}")
+                            )
                         }
                     }
-                    ToolResponse(call.id, call.name, result)
                 }
             }.awaitAll()
 
@@ -935,6 +1119,8 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     companion object {
         const val ACTION_START_SCREEN = "com.aero.voice.START_SCREEN"
+        const val EXTRA_LENS = "camera_lens"
+        const val EXTRA_CAMERA_ON = "camera_on"
 
         /** Do not speak over the assistant: wait this long after its last audio chunk. */
         private const val SPEECH_GAP_MS = 3_000L

@@ -1,8 +1,13 @@
 package com.aero.voice
 
+import android.Manifest
 import android.app.role.RoleManager
+import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.text.Editable
 import android.text.InputType
 import android.view.View
@@ -13,7 +18,9 @@ import android.widget.ImageButton
 import android.widget.RadioGroup
 import android.widget.Spinner
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.google.android.material.button.MaterialButton
 
 class SettingsActivity : AppCompatActivity() {
@@ -115,23 +122,64 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.assistantButton).setOnClickListener {
             requestAssistantRole()
         }
+
+        // ---- Accessibility & Permissions: entry → dedicated screen ----
+
+        findViewById<MaterialButton>(R.id.permEntryButton).setOnClickListener {
+            try {
+                startActivity(
+                    Intent(this, AccessibilityPermissionsActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                )
+            } catch (_: Exception) {
+            }
+        }
+
+        findViewById<TextView>(R.id.backButton).setOnClickListener { finish() }
     }
 
     // True while we've asked the system to switch the assistant role.
     private var assistantRequestPending = false
 
     private fun requestAssistantRole() {
-        val roleManager = getSystemService(RoleManager::class.java)
-        if (roleManager == null || !roleManager.isRoleAvailable(RoleManager.ROLE_ASSISTANT)) {
-            findViewById<TextView>(R.id.settingsStatus).text =
-                "Assistant role not available on this device."
-            return
+        // Open the SYSTEM digital assistant picker directly (Settings → Apps →
+        // Default apps → Digital assistant), so the user can pick Aero.
+        // RoleManager's request dialog auto-cancels on many devices.
+        val candidates = listOf(
+            Intent(Settings.ACTION_VOICE_INPUT_SETTINGS),
+            Intent("android.settings.MANAGE_DEFAULT_APPS_SETTINGS"),
+            Intent("android.settings.DEFAULT_APPS_SETTINGS"),
+            Intent().setComponent(
+                ComponentName(
+                    "com.android.settings",
+                    "com.android.settings.Settings\$DefaultAppsSettingsActivity"
+                )
+            )
+        )
+        for (intent in candidates) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (intent.resolveActivity(packageManager) != null) {
+                try {
+                    assistantRequestPending = true
+                    startActivity(intent)
+                    return
+                } catch (_: Exception) {
+                }
+            }
         }
-        val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT)
-        assistantRequestPending = true
-        // Fire-and-forget: some OEM permission dialogs don't return a proper
-        // Activity result, so we verify on resume by querying the role holders.
-        startActivity(intent)
+        // Ultimate fallback: RoleManager request.
+        try {
+            val roleManager = getSystemService(RoleManager::class.java)
+            if (roleManager != null && roleManager.isRoleAvailable(RoleManager.ROLE_ASSISTANT)) {
+                assistantRequestPending = true
+                startActivity(roleManager.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT))
+                return
+            }
+        } catch (_: Exception) {
+        }
+        findViewById<TextView>(R.id.settingsStatus).text =
+            "Couldn't open assistant settings on this device."
     }
 
     override fun onResume() {
@@ -143,7 +191,6 @@ class SettingsActivity : AppCompatActivity() {
         val status = findViewById<TextView>(R.id.settingsStatus)
         if (held) {
             status.text = "Aero is now your default assistant."
-            // The app is already the assistant — nothing else to do.
             AeroState.assistantRoleGranted = true
         } else {
             status.text =

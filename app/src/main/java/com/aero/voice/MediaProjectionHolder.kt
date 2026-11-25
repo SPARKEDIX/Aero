@@ -34,6 +34,10 @@ object MediaProjectionHolder {
     private var running = false
     private var frameNo = 0
 
+    /** Latest JPEG frame (for on-demand screenshots). Volatile, never stored. */
+    @Volatile
+    var latestJpeg: ByteArray? = null
+
     val isRunning: Boolean get() = running
 
     fun start(app: Context, code: Int, data: Intent) {
@@ -86,19 +90,22 @@ object MediaProjectionHolder {
             if (image != null) {
                 try {
                     val bitmap = toBitmap(image)
-                    val scaled = scaleDown(bitmap, 640)
+                    // Lightweight design: small (320px) + low quality JPEG so
+                    // each frame is a few KB and nothing is saved to storage.
+                    val scaled = scaleDown(bitmap, 320)
                     val baos = ByteArrayOutputStream()
-                    scaled.compress(Bitmap.CompressFormat.JPEG, 65, baos)
+                    scaled.compress(Bitmap.CompressFormat.JPEG, 50, baos)
                     if (scaled !== bitmap) scaled.recycle()
                     bitmap.recycle()
                     frameNo++
                     val jpeg = baos.toByteArray()
+                    latestJpeg = jpeg
 
-                    // Same path as camera frames.
+                    // Same path as camera frames — send, never store.
                     AeroState.liveClient?.sendImage(jpeg)
 
-                    // On-device OCR as a secondary signal every 3rd frame.
-                    if (Mirage.isReady && frameNo % 3 == 0) {
+                    // On-device OCR as a secondary signal every 5th frame.
+                    if (Mirage.isReady && frameNo % 5 == 0) {
                         try {
                             val bmp = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size)
                             val text = Mirage.describe(bmp)
@@ -118,7 +125,8 @@ object MediaProjectionHolder {
             } else {
                 Log.w(TAG, "no frame yet")
             }
-            handler.postDelayed(this, 1000L)
+            // Every 2 seconds — light cadence for low battery/network.
+            handler.postDelayed(this, 2000L)
         }
     }
 
