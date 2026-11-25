@@ -49,24 +49,21 @@ object DeviceActions {
         val clean = number.replace(Regex("[^0-9]"), "")
         if (clean.isEmpty()) return "I couldn't get a number for $target."
         return try {
-            // whatsapp://send is the reliable deep link that opens the chat
-            // with text pre-filled. wa.me can open a browser on some devices.
             val uri = Uri.parse("whatsapp://send?phone=$clean&text=${Uri.encode(message)}")
             val intent = Intent(Intent.ACTION_VIEW, uri)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             ctx.startActivity(intent)
 
             if (AeroAccessibilityService.isEnabled()) {
-                // Give WhatsApp a moment to open the chat, then tap Send with retries.
-                val h = android.os.Handler(android.os.Looper.getMainLooper())
-                for ((delay, index) in listOf(2500L to 0, 4000L to 1, 6000L to 2)) {
-                    h.postDelayed({
-                        AeroAccessibilityService.requestClickByText("send", index)
-                    }, delay)
+                // Wait for the chat to open, then tap Send (accurate node click).
+                AeroAccessibilityService.requestWaitThenTap("send", 10_000L)
+                // Feed the current screen text back to the model for awareness.
+                AeroAccessibilityService.requestDump { dump ->
+                    AeroState.liveClient?.sendContextText("Current screen: $dump")
                 }
                 "Opening WhatsApp to send the message to $target."
             } else {
-                "WhatsApp is open with your message ready — enable Aero accessibility to auto-send."
+                "WhatsApp is open with your message ready."
             }
         } catch (t: Throwable) {
             Log.e(TAG, "whatsapp failed", t)
@@ -105,11 +102,13 @@ object DeviceActions {
 
     /** Sends a generic click on any text/button in the current screen. */
     fun clickByText(ctx: Context, text: String): String {
-        // If the model needs to SEE the screen to click accurately, ensure
-        // screen-share consent is active (user accepts the system dialog).
-        ScreenShareHelper.ensureScreenShare(ctx)
+        // UI-hierarchy automation: exact node click, no screen-share needed.
         return if (AeroAccessibilityService.isEnabled()) {
-            AeroAccessibilityService.requestClickByText(text)
+            AeroAccessibilityService.requestWaitThenTap(text, 8000L)
+            // Let the model know what's now on screen.
+            AeroAccessibilityService.requestDump { dump ->
+                AeroState.liveClient?.sendContextText("After tapping \"$text\", screen: $dump")
+            }
             "Tapping \"$text\" on the screen."
         } else {
             "I need accessibility permission to tap the screen. Opening settings for you…"
@@ -119,7 +118,6 @@ object DeviceActions {
 
     /** Types text into the currently focused field via clipboard paste. */
     fun typeText(ctx: Context, text: String): String {
-        ScreenShareHelper.ensureScreenShare(ctx)
         return if (AeroAccessibilityService.isEnabled()) {
             AeroAccessibilityService.requestTypeText(text)
             "Typing on the screen."

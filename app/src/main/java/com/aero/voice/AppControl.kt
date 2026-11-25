@@ -51,6 +51,16 @@ object AppControl {
             if (launch == null) return "App \"${hit.first}\" cannot be launched."
             launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             ctx.startActivity(launch)
+
+            // After the app opens, read the screen (text dump) and feed it to
+            // the model so it knows what's on screen and can plan the next tap.
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                AeroAccessibilityService.requestDump { dump ->
+                    AeroState.liveClient?.sendContextText(
+                        "${hit.first} is now open. Current screen: $dump"
+                    )
+                }
+            }, 1500L)
             return "Opening ${hit.first}."
         } catch (t: Throwable) {
             Log.e(TAG, "open failed", t)

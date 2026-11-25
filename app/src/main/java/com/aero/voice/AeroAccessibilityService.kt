@@ -160,6 +160,41 @@ class AeroAccessibilityService : AccessibilityService() {
         }
     }
 
+    // ---- Screen-text dump (text "screenshot" for the model) ----
+
+    private fun performDump(): String {
+        val root = rootInActiveWindow ?: return "(no window)"
+        val nodes = ArrayList<AccessibilityNodeInfo>()
+        collectAll(root, nodes)
+        val sb = StringBuilder()
+        for (n in nodes) {
+            val text = n.text?.toString()?.trim().orEmpty()
+            val desc = n.contentDescription?.toString()?.trim().orEmpty()
+            val label = if (text.isNotEmpty()) text else desc
+            if (label.isNotEmpty() && label.length < 120) {
+                if (sb.isNotEmpty()) sb.append(" | ")
+                sb.append(label)
+                if (sb.length > 1800) break
+            }
+        }
+        return if (sb.isEmpty()) "(screen has no readable text)" else sb.toString()
+    }
+
+    // ---- Wait until a node appears, then tap it ----
+
+    private fun waitThenTap(text: String, timeoutMs: Long) {
+        fun attempt(remainingMs: Long) {
+            if (tryFindAndClick(text)) {
+                Log.d(TAG, "waitThenTap clicked \"$text\"")
+            } else if (remainingMs > 0) {
+                handler.postDelayed({ attempt(remainingMs - 300) }, 300L)
+            } else {
+                Log.d(TAG, "waitThenTap timeout on \"$text\"")
+            }
+        }
+        attempt(timeoutMs)
+    }
+
     companion object {
         private const val TAG = "AeroA11y"
 
@@ -230,6 +265,27 @@ class AeroAccessibilityService : AccessibilityService() {
             if (!isEnabled()) return false
             val svc = liveService ?: return false
             try { svc.performGlobalAction(GLOBAL_ACTION_BACK) } catch (_: Throwable) {}
+            return true
+        }
+
+        /** Reads the current screen as text and delivers it via [onResult] (main thread). */
+        fun requestDump(onResult: (String) -> Unit) {
+            val svc = liveService
+            if (svc == null || !isEnabled()) {
+                onResult("(accessibility not enabled)")
+                return
+            }
+            svc.handler.post {
+                val dump = svc.performDump()
+                android.os.Handler(android.os.Looper.getMainLooper()).post { onResult(dump) }
+            }
+        }
+
+        /** Taps a node once it appears; keeps retrying up to [timeoutMs]. */
+        fun requestWaitThenTap(text: String, timeoutMs: Long = 10_000L): Boolean {
+            if (!isEnabled()) return false
+            val svc = liveService ?: return false
+            svc.handler.post { svc.waitThenTap(text, timeoutMs) }
             return true
         }
     }
