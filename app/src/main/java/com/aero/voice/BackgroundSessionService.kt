@@ -74,7 +74,7 @@ class BackgroundSessionService : Service() {
             key,
             Prefs.modelId(this),
             Prefs.voice(this),
-            mood.instruction,
+            AeroPrompt.build(this, mood.instruction),
             object : GeminiLiveClient.Listener {
                 override fun onOpen() {}
                 override fun onSetupComplete() {
@@ -245,6 +245,14 @@ class BackgroundSessionService : Service() {
                                 val spoken = DeviceControl.openDataSettings(this@BackgroundSessionService)
                                 ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
                             }
+                            "remember_fact", "forget_fact", "recall_memory",
+                            "set_reminder", "call_me" -> {
+                                AeroTools.handle(this@BackgroundSessionService, call)
+                                    ?: ToolResponse(
+                                        call.id, call.name,
+                                        JSONObject().put("error", "unknown tool ${call.name}")
+                                    )
+                            }
                             "web_search" -> ToolResponse(
                                 call.id, call.name,
                                 JSONObject().put("error", "web search not available in background session")
@@ -315,7 +323,7 @@ class BackgroundSessionService : Service() {
                 key,
                 Prefs.modelId(this@BackgroundSessionService),
                 Prefs.voice(this@BackgroundSessionService),
-                mood.instruction,
+                AeroPrompt.build(this@BackgroundSessionService, mood.instruction),
                 object : GeminiLiveClient.Listener {
                     override fun onOpen() {}
                     override fun onSetupComplete() {

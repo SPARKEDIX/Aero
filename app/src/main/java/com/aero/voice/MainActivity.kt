@@ -401,7 +401,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             key,
             Prefs.modelId(this),
             Prefs.voice(this),
-            mood.instruction,
+            AeroPrompt.build(this, mood.instruction),
             this
         ).also { it.connect() }
         // MUST set after client is created so screen-share frames can reach it.
@@ -768,6 +768,14 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                         "open_data_settings" -> {
                             val spoken = DeviceControl.openDataSettings(this@MainActivity)
                             ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "remember_fact", "forget_fact", "recall_memory",
+                        "set_reminder", "call_me" -> {
+                            AeroTools.handle(this@MainActivity, call)
+                                ?: ToolResponse(
+                                    call.id, call.name,
+                                    JSONObject().put("error", "unknown tool ${call.name}")
+                                )
                         }
                         else -> {
                             ToolResponse(

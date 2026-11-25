@@ -33,6 +33,7 @@ class ReminderAlertActivity : ComponentActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private val retryRunnable = object : Runnable {
         override fun run() {
+            ReminderNotifier.cancel(this@ReminderAlertActivity, reminderId)
             // Not answered in 60s → retry in 1 minute.
             if (retryCount < 3) {
                 val next = ReminderStore.Reminder(
@@ -66,9 +67,9 @@ class ReminderAlertActivity : ComponentActivity() {
 
         setContentView(R.layout.activity_reminder_alert)
 
-        findViewById<TextView>(R.id.reminderTitle).text = "Aero Reminder"
+        findViewById<TextView>(R.id.reminderTitle).text = "Aero is calling"
         findViewById<TextView>(R.id.reminderMessage).text = message
-        findViewById<TextView>(R.id.reminderSub).text = "Answer to talk to Aero"
+        findViewById<TextView>(R.id.reminderSub).text = "Green button uthao Aero se baat karne ke liye"
 
         findViewById<ImageButton>(R.id.reminderAnswer).setOnClickListener { answer() }
         findViewById<ImageButton>(R.id.reminderClose).setOnClickListener { dismiss() }
@@ -125,6 +126,9 @@ class ReminderAlertActivity : ComponentActivity() {
 
     private fun answer() {
         stopRinging()
+        ReminderNotifier.cancel(this, reminderId)
+        Log.d(TAG, "call answered: $message")
+
         // Open the Aero session + floating orb; AI will announce the reminder.
         if (!AeroState.sessionActive) {
             AeroState.sessionActive = true
@@ -134,19 +138,40 @@ class ReminderAlertActivity : ComponentActivity() {
             }
         }
         FloatingOrbService.show(this)
-        AeroState.liveClient?.sendContextText("[Reminder] $message")
+
+        // The live client may still be connecting; retry until it exists.
+        announceReminder(attempt = 0)
         ReminderStore.remove(this, reminderId)
         finish()
     }
 
+    private fun announceReminder(attempt: Int) {
+        val client = AeroState.liveClient
+        if (client != null) {
+            client.sendContextText(
+                "[Reminder call answered] The user just picked up the Aero call. " +
+                    "Say this reminder naturally, short and clear: $message"
+            )
+            Log.d(TAG, "reminder announced to model (attempt $attempt)")
+            return
+        }
+        if (attempt >= 12) {
+            Log.w(TAG, "live client never connected; reminder not announced")
+            return
+        }
+        handler.postDelayed({ announceReminder(attempt + 1) }, 1000L)
+    }
+
     private fun dismiss() {
         stopRinging()
+        ReminderNotifier.cancel(this, reminderId)
         ReminderStore.remove(this, reminderId)
         finish()
     }
 
     override fun onDestroy() {
         stopRinging()
+        ReminderNotifier.cancel(this, reminderId)
         super.onDestroy()
     }
 

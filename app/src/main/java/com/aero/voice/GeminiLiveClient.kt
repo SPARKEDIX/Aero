@@ -582,10 +582,118 @@ class GeminiLiveClient(
             }))
         })
 
+        // ---- long-term memory ----
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "remember_fact")
+                put(
+                    "description",
+                    "Save a long-term fact about the user (name, city, birthday, preferences, " +
+                        "important dates, relationships). Call this whenever the user says " +
+                        "'yaad rakho', 'remember that', 'note karo' or shares a personal detail. " +
+                        "The fact is stored on the phone and injected into every future session."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("fact", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "One clear sentence to remember, e.g. 'User's name is Kartik'.")
+                        })
+                    })
+                    put("required", JSONArray().put("fact"))
+                })
+            }))
+        })
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "forget_fact")
+                put(
+                    "description",
+                    "Delete saved memories that match a keyword. Use when the user says 'bhool jao' or 'forget'."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("query", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "Keyword or sentence to forget, e.g. 'Delhi' or 'old office'.")
+                        })
+                    })
+                    put("required", JSONArray().put("query"))
+                })
+            }))
+        })
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "recall_memory")
+                put("description", "Return everything saved in long-term memory. Use when the user asks what you remember.")
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject())
+                    put("required", JSONArray())
+                })
+            }))
+        })
+
+        // ---- reminders (call-style ring) ----
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "set_reminder")
+                put(
+                    "description",
+                    "Schedule an on-device reminder. At that time the phone rings like a real " +
+                        "incoming call and the user can talk to Aero. Never say reminders are " +
+                        "unsupported — always call this tool."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("when", JSONObject().apply {
+                            put("type", "STRING")
+                            put(
+                                "description",
+                                "Time phrase exactly as the user said it, e.g. 'kal shaam 5 baje', " +
+                                    "'aaj 8:30 pm', '10 minute baad', 'in 2 hours'. Also accepts ISO " +
+                                    "like '2026-11-26 17:00'."
+                            )
+                        })
+                        put("message", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "Short reminder text, e.g. 'gym jana hai'.")
+                        })
+                    })
+                    put("required", JSONArray().put("when").put("message"))
+                })
+            }))
+        })
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "call_me")
+                put(
+                    "description",
+                    "Ring the user's phone with an in-app Aero call. Use for 'mujhe call karo', " +
+                        "'call me', or 'call me in 10 minutes'."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("delay_minutes", JSONObject().apply {
+                            put("type", "INTEGER")
+                            put("description", "0 = ring now. Otherwise call after this many minutes.")
+                        })
+                        put("message", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "What the call should say, e.g. 'Aero reminder: meeting at 5'.")
+                        })
+                    })
+                    put("required", JSONArray().put("delay_minutes"))
+                })
+            }))
+        })
+
         return arr
     }
-
-    /** Send one or more function responses. Gemini continues the turn after this. */
     fun sendToolResponses(responses: List<ToolResponse>) {
         if (responses.isEmpty()) return
         val arr = JSONArray()

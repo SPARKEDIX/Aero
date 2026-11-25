@@ -140,6 +140,10 @@ object AppControl {
         object VolumeDown : Command()
         data class VolumeSet(val percent: Int) : Command()
         data class Reminder(val message: String, val atMillis: Long) : Command()
+        data class Remember(val fact: String) : Command()
+        data class Forget(val query: String) : Command()
+        object RecallMemory : Command()
+        data class CallMe(val atMillis: Long?) : Command()
     }
 
     private val openRe = Regex(
@@ -271,6 +275,37 @@ object AppControl {
             }
         }
 
+        // Memory: "yaad rakho mera naam Kartik hai" / "remember that ..."
+        val remember = Regex(
+            "(?i)\\b(yaad rakho|yaad rakhna|yaad rakh|remember that|remember|note karo|note kar)\\b(.*)"
+        ).find(t)
+        if (remember != null) {
+            val fact = remember.groupValues[2].trim().trimStart(',', '.', '-', ':').trim()
+                .replace(Regex("(?i)^(ki|ke|ka|that)\\s+"), "")
+            if (fact.length >= 2) return Command.Remember(fact)
+        }
+
+        // Forget: "bhool jao ki ...", "forget ..."
+        val forget = Regex("(?i)\\b(bhool jao|bhool ja|forget)\\b(.*)").find(t)
+        if (forget != null) {
+            val q = forget.groupValues[2].trim().replace(Regex("(?i)^(ki|ke|ka|that)\\s+"), "")
+            if (q.length >= 2) return Command.Forget(q)
+        }
+
+        // Recall: "tujhe kya yaad hai", "what do you remember"
+        if (Regex("(?i)\\b(kya yaad|yaad hai kya|what do you remember|memory batao|memory dikhao)\\b").containsMatchIn(t)) {
+            return Command.RecallMemory
+        }
+
+        // "mujhe call karo" = in-app Aero call (NOT a SIM call)
+        if (Regex("(?i)\\b(call me|mujhe call|mujhko call|phone karo mujhe|mujhe phone karo)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\bcall\\s*(karo|karna|kar do|kar de)\\b").containsMatchIn(t) && t.contains("mujh")
+        ) {
+            val parsed = ReminderParser.parse(t)
+            val at = parsed?.atMillis?.takeIf { it > System.currentTimeMillis() + 10_000L }
+            return Command.CallMe(at)
+        }
+
         // Camera
         if (Regex("(?i)\\b(front camera|selfie camera|camera front)\\b").containsMatchIn(t)) {
             return Command.CameraLive("front")
@@ -398,6 +433,30 @@ object AppControl {
             val r = ReminderStore.add(ctx, command.message, command.atMillis)
             ReminderScheduler.schedule(ctx, r)
             "Reminder set for ${java.text.SimpleDateFormat("EEE, d MMM h:mm a", java.util.Locale.getDefault()).format(command.atMillis)}: ${command.message}"
+        }
+        is Command.Remember -> {
+            MemoryStore.add(ctx, command.fact)
+            "Yaad rakh liya: ${command.fact}"
+        }
+        is Command.Forget -> {
+            val removed = MemoryStore.forget(ctx, command.query)
+            if (removed > 0) "Bhool gaya: ${command.query}" else "Mujhe aisa kuch yaad nahi tha: ${command.query}"
+        }
+        is Command.RecallMemory -> {
+            val summary = MemoryStore.summary(ctx)
+            AeroState.liveClient?.sendContextText("User's saved memory:\n$summary")
+            summary
+        }
+        is Command.CallMe -> {
+            val at = command.atMillis
+            if (at == null) {
+                ReminderScheduler.ringNow(ctx, "Aero: tumne call karne ko kaha tha.")
+                "Calling you now."
+            } else {
+                val r = ReminderStore.add(ctx, "Aero call", at)
+                ReminderScheduler.schedule(ctx, r)
+                "Aero will call you at ${java.text.SimpleDateFormat("EEE, d MMM h:mm a", java.util.Locale.getDefault()).format(at)}."
+            }
         }
     }
 }
