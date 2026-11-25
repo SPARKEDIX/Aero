@@ -160,6 +160,7 @@ class FloatingOrbService : Service() {
                 }
                 startActivity(intent)
             }
+            updateOverlayScreenToggle()
         }
 
         mute.setOnClickListener {
@@ -167,6 +168,7 @@ class FloatingOrbService : Service() {
             mute.setImageResource(
                 if (AeroState.micMuted) R.drawable.ic_mic_off else R.drawable.ic_mic
             )
+            updateOverlayMute()
         }
 
         root.findViewById<ImageButton>(R.id.overlayClose).setOnClickListener {
@@ -187,6 +189,29 @@ class FloatingOrbService : Service() {
 
         // Keep the mini orb alive with the shared voice levels.
         overlayOrb.visibility = View.VISIBLE
+        updateOverlayMute()
+        updateOverlayScreenToggle()
+    }
+
+    /** Overlay mute icon turns red while muted. */
+    private fun updateOverlayMute() {
+        val mute = root.findViewById<ImageButton>(R.id.overlayMute)
+        val red = AeroState.micMuted
+        mute.imageTintList = android.content.res.ColorStateList.valueOf(
+            if (red) android.graphics.Color.WHITE else android.graphics.Color.WHITE
+        )
+        mute.backgroundTintList = android.content.res.ColorStateList.valueOf(
+            if (red) android.graphics.Color.parseColor("#EF4444") else 0x00000000
+        )
+    }
+
+    /** Overlay screen-toggle icon turns red while sharing is OFF. */
+    private fun updateOverlayScreenToggle() {
+        val toggle = root.findViewById<ImageButton>(R.id.overlayScreenToggle)
+        val running = MediaProjectionHolder.isRunning
+        toggle.backgroundTintList = android.content.res.ColorStateList.valueOf(
+            if (!running) android.graphics.Color.parseColor("#EF4444") else 0x00000000
+        )
     }
 
     private val boostPump = object : Runnable {

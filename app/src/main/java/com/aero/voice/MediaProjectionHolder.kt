@@ -68,6 +68,11 @@ object MediaProjectionHolder {
 
             handler.postDelayed(captureRunnable, 500L)
             Log.d(TAG, "media projection started ${w}x${h}@$dpi")
+
+            // Tell the model it can now see the screen.
+            AeroState.liveClient?.sendContextText(
+                "Screen sharing is now ON. You can see the user's screen as video frames."
+            )
         } catch (t: Throwable) {
             Log.e(TAG, "start failed", t)
             running = false
@@ -143,6 +148,7 @@ object MediaProjectionHolder {
     }
 
     fun stop() {
+        val wasRunning = running
         running = false
         handler.removeCallbacks(captureRunnable)
         try {
@@ -156,5 +162,15 @@ object MediaProjectionHolder {
         projection = null
         reader = null
         Log.d(TAG, "media projection stopped")
+
+        if (wasRunning) {
+            // Tell the model the screen is no longer visible, so it stops
+            // hallucinating what's on screen.
+            AeroState.liveClient?.sendContextText(
+                "Screen sharing has been STOPPED. You can NO LONGER see the user's screen. " +
+                    "Do not describe any screen content anymore. If the user asks what you see, " +
+                    "tell them screen sharing is off and offer to restart it."
+            )
+        }
     }
 }

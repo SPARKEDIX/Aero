@@ -127,6 +127,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                 } catch (t: Throwable) {
                     Log.e("AeroScreen", "failed to start projection service", t)
                 }
+                updateScreenShareButton()
             } else {
                 Log.w("AeroScreen", "consent cancelled result=${result.resultCode}")
             }
@@ -195,6 +196,8 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         findViewById<ImageButton>(R.id.screenShareButton).setOnClickListener {
             launchScreenPicker()
         }
+        updateScreenShareButton()
+        updateMuteButton()
         findViewById<ImageButton>(R.id.liveButton).setOnClickListener {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                 == PackageManager.PERMISSION_GRANTED
@@ -219,6 +222,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             micMuted = !micMuted
             AeroState.micMuted = micMuted
             muteButton.setImageResource(if (micMuted) R.drawable.ic_mic_off else R.drawable.ic_mic)
+            updateMuteButton()
         }
         findViewById<ImageButton>(R.id.attachButton).setOnClickListener {
             docPicker.launch(
@@ -253,6 +257,10 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     override fun onResume() {
         super.onResume()
+        // Refresh status indicators (share on/off, mute) — state may have
+        // changed via the floating orb or the consent flow.
+        updateScreenShareButton()
+        updateMuteButton()
         // If this resume was caused by the assistant proxy (invisible) wake,
         // keep the floating orb alive. Otherwise hide it — the orb only lives
         // while the app is backgrounded.
@@ -327,6 +335,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         stopService(Intent(this, ScreenShareService::class.java)) // stops MediaProjectionHolder
         stopFloatingOrb() // removes overlay
         miniOrb.visibility = View.GONE
+        updateScreenShareButton()
     }
 
     override fun onStop() {
@@ -414,6 +423,28 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             orbView.micBoost = 0f
             orbView.aiBoost = 0f
         }
+        updateMuteButton()
+        updateScreenShareButton()
+    }
+
+    /** Mute button turns red while the mic is muted. */
+    private fun updateMuteButton() {
+        val tint = if (micMuted) getColor(R.color.red) else getColor(R.color.bg_circle)
+        muteButton.backgroundTintList = ColorStateList.valueOf(tint)
+        muteButton.imageTintList = ColorStateList.valueOf(
+            if (micMuted) android.graphics.Color.WHITE else getColor(R.color.text_dark)
+        )
+    }
+
+    /** Screen-share button turns red while sharing is OFF. */
+    private fun updateScreenShareButton() {
+        val running = MediaProjectionHolder.isRunning
+        val btn = findViewById<ImageButton>(R.id.screenShareButton)
+        val tint = if (running) getColor(R.color.bg_circle) else getColor(R.color.red)
+        btn.backgroundTintList = ColorStateList.valueOf(tint)
+        btn.imageTintList = ColorStateList.valueOf(
+            if (running) getColor(R.color.text_dark) else android.graphics.Color.WHITE
+        )
     }
 
     /** Side buttons pop out of the mic like bubbles and slide back in on stop. */

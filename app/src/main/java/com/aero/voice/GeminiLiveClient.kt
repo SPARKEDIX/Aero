@@ -56,10 +56,12 @@ class GeminiLiveClient(
         private val INTERNET_INSTRUCTIONS = AeroIdentity.TEXT + """
 
             You can access the live internet with the `web_search` tool.
-            You also receive live camera and screen-share images as video frames —
-            you can see them, so answer questions about what is visible instead of
-            saying you cannot see.
-            Use it whenever the user asks about news, current events, weather, prices, sports,
+            You also receive live camera and screen-share images as video frames
+            whenever those features are ACTIVE. Only describe what you actually
+            see in recent frames. If you have NOT received frames recently,
+            say clearly that you cannot see the screen and suggest enabling
+            screen sharing. Never pretend to see the screen when sharing is off.
+            Use internet search whenever the user asks about news, current events, weather, prices, sports,
             or any fact that may have changed recently. Call the tool before answering such
             questions and never claim you cannot access the internet.
             The tool returns JSON from several websites. Synthesize a concise spoken answer,
