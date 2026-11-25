@@ -139,6 +139,7 @@ object AppControl {
         object VolumeUp : Command()
         object VolumeDown : Command()
         data class VolumeSet(val percent: Int) : Command()
+        data class Reminder(val message: String, val atMillis: Long) : Command()
     }
 
     private val openRe = Regex(
@@ -260,6 +261,14 @@ object AppControl {
         if (vol != null) {
             val raw = vol.groupValues[2].toIntOrNull()
             if (raw != null) return Command.VolumeSet(raw.coerceIn(0, 100))
+        }
+
+        // Reminder: "kal 5 baje yaad kara" / "remind me at 6"
+        if (Regex("(?i)\\b(yaad|remind|reminder|yaad kara|yaad dilana)\\b").containsMatchIn(t)) {
+            val parsed = ReminderParser.parse(t)
+            if (parsed != null) {
+                return Command.Reminder(parsed.message, parsed.atMillis)
+            }
         }
 
         // Camera
@@ -385,5 +394,10 @@ object AppControl {
         is Command.VolumeUp -> DeviceControl.volumeUp(ctx)
         is Command.VolumeDown -> DeviceControl.volumeDown(ctx)
         is Command.VolumeSet -> DeviceControl.volume(ctx, command.percent)
+        is Command.Reminder -> {
+            val r = ReminderStore.add(ctx, command.message, command.atMillis)
+            ReminderScheduler.schedule(ctx, r)
+            "Reminder set for ${java.text.SimpleDateFormat("EEE, d MMM h:mm a", java.util.Locale.getDefault()).format(command.atMillis)}: ${command.message}"
+        }
     }
 }
