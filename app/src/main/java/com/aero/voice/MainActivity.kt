@@ -771,7 +771,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                         }
                         "remember_fact", "forget_fact", "recall_memory",
                         "set_reminder", "call_me", "get_current_time",
-                        "manage_reminders", "youtube_control" -> {
+                        "manage_reminders", "youtube_control", "screen_lock" -> {
                             AeroTools.handle(this@MainActivity, call)
                                 ?: ToolResponse(
                                     call.id, call.name,

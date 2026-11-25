@@ -152,6 +152,8 @@ object AppControl {
         object ClearAllReminders : Command()
         data class YoutubePlayPause(val play: Boolean?) : Command()
         data class YoutubeSpeed(val label: String) : Command()
+        object LockPhone : Command()
+        object UnlockPhone : Command()
     }
 
     private val openRe = Regex(
@@ -365,6 +367,20 @@ object AppControl {
         }
         if (Regex("(?i)\\b(speed normal|normal speed|1x|1\\s*x)\\b").containsMatchIn(t)) {
             return Command.YoutubeSpeed("Normal")
+        }
+
+        // ---- Screen lock / unlock ----
+        // "phone lock karo" / "screen lock kar do" / "lock kar"
+        if (Regex("(?i)\\b(phone|screen|mobile)\\b.*\\b(lock|band|talwa)\\b.*\\b(karo|kar|karna|do)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(lock)\\b.*\\b(phone|screen|mobile|karo|kar|karna|do)\\b").containsMatchIn(t)
+        ) {
+            return Command.LockPhone
+        }
+        // "phone unlock karo" / "unlock kar do" / "anlock" / "khole"
+        if (Regex("(?i)\\b(phone|screen|mobile)\\b.*\\b(unlock|kholo|khol|khole|band kholo)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(unlock|kholo|khol)\\b.*\\b(phone|screen|mobile|karo|kar|karna|do)\\b").containsMatchIn(t)
+        ) {
+            return Command.UnlockPhone
         }
 
         // Memory: "yaad rakho mera naam Kartik hai" / "remember that ..."
@@ -585,5 +601,7 @@ object AppControl {
             YouTubeControl.setSpeed(ctx, command.label)
             "${command.label} speed laga raha hoon… (YouTube khulna chahiye)"
         }
+        is Command.LockPhone -> ScreenControl.lock(ctx)
+        is Command.UnlockPhone -> ScreenControl.unlock(ctx)
     }
 }

@@ -138,6 +138,16 @@ object AeroTools {
             ToolResponse(call.id, call.name, JSONObject().put("status", status))
         }
 
+        "screen_lock" -> {
+            val action = call.args.optString("action").trim().lowercase()
+            val status = when (action) {
+                "lock" -> ScreenControl.lock(ctx)
+                "unlock" -> ScreenControl.unlock(ctx)
+                else -> "Unknown screen action: $action"
+            }
+            ToolResponse(call.id, call.name, JSONObject().put("status", status))
+        }
+
         else -> null
     }
 }

@@ -125,6 +125,23 @@
             android:screenOrientation="portrait" />
 
         <activity
+            android:name=".DeveloperModeActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <receiver
+            android:name=".AeroDeviceAdminReceiver"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
+        <activity
             android:name=".AssistantProxyActivity"
             android:exported="true"
             android:taskAffinity=".assist"

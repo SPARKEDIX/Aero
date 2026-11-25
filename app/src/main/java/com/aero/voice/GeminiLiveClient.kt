@@ -769,6 +769,29 @@ class GeminiLiveClient(
             }))
         })
 
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "screen_lock")
+                put(
+                    "description",
+                    "Lock or unlock the user's phone. Uses Device Admin (lockNow). " +
+                        "Unlock temporarily disables the keyguard for 60 seconds (Android " +
+                        "does not allow apps to type the PIN). Use when the user says " +
+                        "'phone lock karo' / 'unlock karo'."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("action", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "lock | unlock")
+                        })
+                    })
+                    put("required", JSONArray().put("action"))
+                })
+            }))
+        })
+
         return arr
     }
     fun sendToolResponses(responses: List<ToolResponse>) {

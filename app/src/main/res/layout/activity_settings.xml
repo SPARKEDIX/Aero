@@ -243,6 +243,18 @@
                 android:textStyle="bold"
                 android:text="@string/settings_perm_open" />
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/devModeButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                app:cornerRadius="12dp"
+                app:backgroundTint="#111827"
+                android:textColor="@android:color/white"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:text="⚙️ Developer Mode" />
+
             <TextView
                 android:id="@+id/settingsStatus"
                 android:layout_width="match_parent"

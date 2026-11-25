@@ -136,6 +136,19 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
+        // ---- Developer Mode: AI memory clear + screen lock/unlock setup ----
+
+        findViewById<MaterialButton>(R.id.devModeButton).setOnClickListener {
+            try {
+                startActivity(
+                    Intent(this, DeveloperModeActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                )
+            } catch (_: Exception) {
+            }
+        }
+
         findViewById<TextView>(R.id.backButton).setOnClickListener { finish() }
     }
 
