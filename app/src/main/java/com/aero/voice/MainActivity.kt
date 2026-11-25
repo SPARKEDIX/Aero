@@ -67,7 +67,9 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     private val miniOrb by lazy { findViewById<View>(R.id.miniOrb) }
     private val miniOrbView by lazy { findViewById<OrbView>(R.id.miniOrbView) }
 
-    private var micMuted = false
+    private var micMuted: Boolean
+        get() = AeroState.micMuted
+        set(value) { AeroState.micMuted = value }
     private var lensFacing = CameraSelector.LENS_FACING_BACK
     private var cameraLive = false
     private var cameraProvider: ProcessCameraProvider? = null
@@ -220,7 +222,6 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         }
         muteButton.setOnClickListener {
             micMuted = !micMuted
-            AeroState.micMuted = micMuted
             muteButton.setImageResource(if (micMuted) R.drawable.ic_mic_off else R.drawable.ic_mic)
             updateMuteButton()
         }
@@ -533,7 +534,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                     if (!micOpen) return@AudioRecorder
                 }
 
-                if (!micMuted && !AeroState.micMuted) client?.sendAudio(chunk)
+                if (!AeroState.micMuted) client?.sendAudio(chunk)
                 val p = player
                 if (p != null && now - lastFlushAt > 400) {
                     lastFlushAt = now
