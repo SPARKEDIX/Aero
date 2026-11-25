@@ -1,15 +1,12 @@
 package com.aero.voice
 
 import android.app.AlertDialog
-import android.content.Context
 import android.os.Bundle
-import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
-import org.json.JSONObject
 
-/** Developer Mode: clear AI memory + screen lock/unlock setup (Device Admin + saved credentials). */
+/** Developer Mode: clear AI memory + screen lock (Device Admin only). */
 class DeveloperModeActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,43 +35,13 @@ class DeveloperModeActivity : AppCompatActivity() {
                 .show()
         }
 
-        // ---- Device Admin ----
+        // ---- Device Admin (lock only) ----
         refreshAdminStatus()
         findViewById<MaterialButton>(R.id.enableAdminButton).setOnClickListener {
             ScreenControl.openAdminSettings(this)
         }
-        findViewById<MaterialButton>(R.id.copyAdbButton).setOnClickListener {
-            val cmd = ScreenControl.deviceOwnerCommand()
-            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-            cm.setPrimaryClip(android.content.ClipData.newPlainText("adb", cmd))
-            findViewById<TextView>(R.id.devStatus).text =
-                "Command copy ho gayi. USB se PC se jodo aur chalao:\n$cmd"
-        }
-
-        // ---- Saved credentials ----
-        val pinInput = findViewById<EditText>(R.id.pinInput)
-        val patternInput = findViewById<EditText>(R.id.patternInput)
-        val saved = loadCredentials()
-        pinInput.setText(saved.optString("pin"))
-        patternInput.setText(saved.optString("pattern"))
-
-        findViewById<MaterialButton>(R.id.savePinButton).setOnClickListener {
-            val pin = pinInput.text.toString().trim()
-            val pattern = patternInput.text.toString().trim()
-            if (pin.isEmpty() && pattern.isEmpty()) {
-                findViewById<TextView>(R.id.pinStatus).text = "Kuch to daalo — PIN ya pattern."
-                return@setOnClickListener
-            }
-            saveCredentials(pin, pattern)
-            findViewById<TextView>(R.id.pinStatus).text = "Saved. Aero ab isse janta hai (sirf isi phone par)."
-        }
-
-        // ---- Test buttons ----
         findViewById<MaterialButton>(R.id.testLockButton).setOnClickListener {
             findViewById<TextView>(R.id.devStatus).text = ScreenControl.lock(this)
-        }
-        findViewById<MaterialButton>(R.id.testUnlockButton).setOnClickListener {
-            findViewById<TextView>(R.id.devStatus).text = ScreenControl.unlockFromActivity(this)
         }
     }
 
@@ -91,33 +58,10 @@ class DeveloperModeActivity : AppCompatActivity() {
 
     private fun refreshAdminStatus() {
         val status = findViewById<TextView>(R.id.adminStatus)
-        val hint = findViewById<TextView>(R.id.ownerHint)
-        if (ScreenControl.isAdmin(this)) {
-            status.text = "✓ Device Admin ACTIVE — LOCK ready hai."
-            if (ScreenControl.isDeviceOwner(this)) {
-                hint.text = "★ Device Owner — auto-unlock bhi ready hai (60s keyguard bypass)."
-            } else {
-                hint.text = "Unlock: is phone par multiple users hain, isliye Device Owner nahi bana sakte (Android limit). " +
-                    "To bhi unlock kaam karega — Aero system ke lock screen ko khol dega, bas PIN/pattern daal do (1 tap)."
-            }
+        status.text = if (ScreenControl.isAdmin(this)) {
+            "✓ Device Admin ACTIVE — lock ready hai."
         } else {
-            status.text = "✗ Device Admin nahi hai — Enable dabao."
-            hint.text = ""
+            "✗ Device Admin nahi hai — Enable dabao."
         }
-    }
-
-    private fun loadCredentials(): JSONObject {
-        val prefs = getSharedPreferences("dev_pin", Context.MODE_PRIVATE)
-        return JSONObject().apply {
-            put("pin", prefs.getString("pin", ""))
-            put("pattern", prefs.getString("pattern", ""))
-        }
-    }
-
-    private fun saveCredentials(pin: String, pattern: String) {
-        getSharedPreferences("dev_pin", Context.MODE_PRIVATE).edit()
-            .putString("pin", pin)
-            .putString("pattern", pattern)
-            .apply()
     }
 }

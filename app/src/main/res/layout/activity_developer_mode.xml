@@ -81,12 +81,12 @@
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp" />
 
-            <!-- ============ Screen Lock / Unlock ============ -->
+            <!-- ============ Screen Lock ============ -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="28dp"
-                android:text="AI Screen Lock / Unlock"
+                android:text="AI Screen Lock"
                 android:textColor="@color/text_primary"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -96,7 +96,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:lineSpacingExtra="2dp"
-                android:text="Aero ko lock/unlock ke liye Device Admin chahiye. Unlock ke liye Android PIN type nahi karne deta — isliye Aero keyguard ko 60 second ke liye disable karta hai (phone seedha khulta hai), phir apne aap wapas lock."
+                android:text="Aero ko phone lock karne ke liye Device Admin chahiye. Unlock support nahi karta (Android limit)."
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp" />
 
@@ -108,26 +108,6 @@
                 android:textColor="@color/accent"
                 android:textSize="13sp"
                 android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/ownerHint"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:lineSpacingExtra="2dp"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/copyAdbButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                app:cornerRadius="12dp"
-                app:backgroundTint="#1F2937"
-                android:text="Copy adb Device-Owner Command"
-                android:textColor="@android:color/white"
-                android:textSize="14sp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/enableAdminButton"
@@ -141,91 +121,14 @@
                 android:textSize="15sp"
                 android:textStyle="bold" />
 
-            <!-- Save your lock credentials (stored only on this phone) -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:text="Apna Lock Credential Save Karo"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:lineSpacingExtra="2dp"
-                android:text="PIN / Password / Pattern jo tune apne lock screen par daala hai. Ye sirf isi phone par save hota hai (cosura, cloud nahi)."
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
-
-            <EditText
-                android:id="@+id/pinInput"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/bg_input"
-                android:hint="PIN / Password (e.g. 1234)"
-                android:inputType="textPassword"
-                android:padding="14dp"
-                android:textColor="@color/text_primary"
-                android:textColorHint="@color/text_secondary"
-                android:textSize="14sp" />
-
-            <EditText
-                android:id="@+id/patternInput"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/bg_input"
-                android:hint="Pattern (agar hai, e.g. 1-2-3-6-9)"
-                android:inputType="text"
-                android:padding="14dp"
-                android:textColor="@color/text_primary"
-                android:textColorHint="@color/text_secondary"
-                android:textSize="14sp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/savePinButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                app:cornerRadius="12dp"
-                app:backgroundTint="@color/accent"
-                android:text="Save Lock Credential"
-                android:textColor="@android:color/white"
-                android:textSize="15sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/pinStatus"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:textColor="@color/text_secondary"
-                android:textSize="13sp" />
-
-            <!-- Test buttons -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/testLockButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="14dp"
                 app:cornerRadius="12dp"
                 app:backgroundTint="#111827"
                 android:text="Test: Lock Now (AI se bhi bol sakte ho)"
-                android:textColor="@android:color/white"
-                android:textSize="14sp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/testUnlockButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                app:cornerRadius="12dp"
-                app:backgroundTint="#111827"
-                android:text="Test: Unlock (60s keyguard bypass)"
                 android:textColor="@android:color/white"
                 android:textSize="14sp" />
 
