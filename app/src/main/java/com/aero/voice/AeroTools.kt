@@ -106,6 +106,22 @@ object AeroTools {
             }
         }
 
+        "manage_reminders" -> {
+            val action = call.args.optString("action").trim().lowercase()
+            val query = call.args.optString("query").trim()
+            val minutes = call.args.optInt("minutes", 10).coerceIn(1, 1440)
+            val status = when (action) {
+                "list" -> ReminderManager.list(ctx)
+                "cancel" -> ReminderManager.cancel(ctx, query)
+                "delay" -> ReminderManager.delay(ctx, query, minutes)
+                "earlier" -> ReminderManager.earlier(ctx, query, minutes)
+                "fire_now" -> ReminderManager.fireNow(ctx, query)
+                "clear_all" -> ReminderManager.clearAll(ctx)
+                else -> "Unknown action: $action"
+            }
+            ToolResponse(call.id, call.name, JSONObject().put("status", status))
+        }
+
         else -> null
     }
 }

@@ -144,6 +144,12 @@ object AppControl {
         data class Forget(val query: String) : Command()
         object RecallMemory : Command()
         data class CallMe(val atMillis: Long?) : Command()
+        object ListReminders : Command()
+        data class CancelReminder(val query: String) : Command()
+        data class DelayReminder(val query: String, val minutes: Int) : Command()
+        data class EarlierReminder(val query: String, val minutes: Int) : Command()
+        data class FireReminderNow(val query: String) : Command()
+        object ClearAllReminders : Command()
     }
 
     private val openRe = Regex(
@@ -275,6 +281,63 @@ object AppControl {
             }
         }
 
+        // ---- Reminder management ----
+
+        // List: "reminders dikhao" / "kya kya reminders hain"
+        if (Regex("(?i)\\b(reminders|reminder|yaad)\\b.*\\b(dikhao|dikha|batao|bata|list|kya kya)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(kya kya|list)\\b.*\\b(reminders|reminder|yaad)\\b").containsMatchIn(t)
+        ) {
+            return Command.ListReminders
+        }
+
+        // Clear all: "saare reminders clear karo" / "clear all reminders"
+        if (Regex("(?i)\\b(saare|sab|all)\\b.*\\b(clear|saaf|band|hatao)\\b.*\\b(reminder|reminders|yaad)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(clear|saaf|band|hatao)\\b.*\\b(saare|sab|all)\\b.*\\b(reminder|reminders|yaad)\\b").containsMatchIn(t)
+        ) {
+            return Command.ClearAllReminders
+        }
+
+        // "Abhi karo" / "fire now" — without a target, fire ALL.
+        if (Regex("(?i)\\b(reminder|reminders|yaad)\\b.*\\b(abhi|now|fori|turant)\\b.*\\b(karo|karna|kar do|fire)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(abhi|now)\\b.*\\b(reminder|reminders|yaad)\\b.*\\b(karo|karna|kar do)\\b").containsMatchIn(t)
+        ) {
+            val target = reminderTarget(t)
+            return Command.FireReminderNow(target)
+        }
+
+        // Delay: "reminder 10 minute delay karo" / "reminder delay karo 10 minute" / "10 min aage kar do"
+        val delayMin = Regex(
+            "(?i)\\b(reminder|reminders|yaad)\\b.*\\b([0-9]{1,3}|[a-z]+)\\s*(minute|minutes|mins|min|ghanta|ghante|hour)\\s*(delay|aage|baad|peeche|piche)\\b|\\b(delay|aage|baad|peeche|piche)\\b.*\\b([0-9]{1,3}|[a-z]+)\\s*(minute|minutes|mins|min|ghanta|ghante|hour)\\b"
+        ).find(t)
+        if (delayMin != null) {
+            val n = delayMin.groupValues[2].ifEmpty { delayMin.groupValues[6] }
+            ReminderParser.parseNumber(n)?.let { minutes ->
+                if (minutes in 1..1440) {
+                    return Command.DelayReminder(reminderTarget(t), minutes)
+                }
+            }
+        }
+
+        // Earlier: "jldi karo 10 minute" / "reminder pehle kar do" / "10 min jldi"
+        val earlierMin = Regex(
+            "(?i)\\b(reminder|reminders|yaad)\\b.*\\b(jldi|jaldi|pehle|earlier|peedhe)\\b.*\\b([0-9]{1,3}|[a-z]+)\\s*(minute|minutes|mins|min|ghanta|ghante|hour)\\b|\\b([0-9]{1,3}|[a-z]+)\\s*(minute|minutes|mins|min|ghanta|ghante|hour)\\s*(jldi|jaldi|pehle|earlier)\\b"
+        ).find(t)
+        if (earlierMin != null) {
+            val n = earlierMin.groupValues[3].ifEmpty { earlierMin.groupValues[5] }
+            ReminderParser.parseNumber(n)?.let { minutes ->
+                if (minutes in 1..1440) {
+                    return Command.EarlierReminder(reminderTarget(t), minutes)
+                }
+            }
+        }
+
+        // Cancel: "reminder cancel karo" / "gym wala band karo" / "cancel reminder"
+        if (Regex("(?i)\\b(reminder|reminders|yaad)\\b.*\\b(cancel|band|khatam|hatao|remove)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(cancel|band|khatam|hatao|remove)\\b.*\\b(reminder|reminders|yaad)\\b").containsMatchIn(t)
+        ) {
+            return Command.CancelReminder(reminderTarget(t))
+        }
+
         // Memory: "yaad rakho mera naam Kartik hai" / "remember that ..."
         val remember = Regex(
             "(?i)\\b(yaad rakho|yaad rakhna|yaad rakh|remember that|remember|note karo|note kar)\\b(.*)"
@@ -364,7 +427,6 @@ object AppControl {
             val target = call.groupValues[1].trim().trimStart(' ', 'k', 'o').trim()
             if (target.isNotEmpty()) return Command.Call(target)
         }
-
         val type = typeRe.find(t)
         if (type != null) {
             val target = type.groupValues[1].trim()
@@ -390,6 +452,27 @@ object AppControl {
         }
 
         return null
+    }
+
+    /** Extracts a reminder name/target from the sentence (e.g. "gym wala"). */
+    private fun reminderTarget(text: String): String {
+        val t = text.trim().lowercase()
+        // Try patterns: "gym wala reminder", "reminder gym wala", "gym wali"
+        val m = Regex(
+            "(?i)\\b(reminder|reminders|yaad)\\b.*?\\b([a-z0-9]+(?:\\s+[a-z0-9]+){0,4})\\b.*?(wala|wali|wale|ka|ki|ke)?\\b"
+        ).find(t) ?: return ""
+        val candidate = m.groupValues[2].trim()
+        val stopWords = setOf(
+            "cancel", "band", "delete", "remove", "hatao", "khatam", "dikhao", "dikha",
+            "batao", "bata", "list", "clear", "saaf", "delay", "aage", "baad", "jldi",
+            "jaldi", "pehle", "abhi", "now", "fire", "karo", "karna", "kar", "do",
+            "minute", "minutes", "mins", "min", "ghanta", "ghante", "hour", "hours",
+            "reminder", "reminders", "yaad", "wala", "wali", "wale"
+        )
+        val words = candidate.split(Regex("\\s+")).filter {
+            it.isNotBlank() && it.length >= 2 && it !in stopWords
+        }
+        return words.joinToString(" ")
     }
 
     /**
@@ -458,5 +541,15 @@ object AppControl {
                 "Aero will call you at ${java.text.SimpleDateFormat("EEE, d MMM h:mm a", java.util.Locale.getDefault()).format(at)}."
             }
         }
+        is Command.ListReminders -> {
+            val list = ReminderManager.list(ctx)
+            AeroState.liveClient?.sendContextText("User's reminders:\n$list")
+            list
+        }
+        is Command.CancelReminder -> ReminderManager.cancel(ctx, command.query)
+        is Command.DelayReminder -> ReminderManager.delay(ctx, command.query, command.minutes)
+        is Command.EarlierReminder -> ReminderManager.earlier(ctx, command.query, command.minutes)
+        is Command.FireReminderNow -> ReminderManager.fireNow(ctx, command.query)
+        is Command.ClearAllReminders -> ReminderManager.clearAll(ctx)
     }
 }

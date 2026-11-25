@@ -209,6 +209,8 @@ object ReminderParser {
         return NUMBER_WORDS[raw.lowercase()]
     }
 
+    internal fun parseNumber(raw: String): Int? = number(raw)
+
     private fun cleanMessage(text: String, matchedTime: String?): String {
         var s = " " + text.lowercase() + " "
         matchedTime?.let { s = s.replace(it.lowercase(), " ") }

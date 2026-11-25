@@ -709,6 +709,40 @@ class GeminiLiveClient(
             }))
         })
 
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "manage_reminders")
+                put(
+                    "description",
+                    "Manage the user's existing reminders: list them, cancel, delay " +
+                        "(push later), make earlier, or fire now. Use when the user says " +
+                        "things like 'reminders dikhao', 'gym wala band karo', '10 minute delay " +
+                        "karo', 'jldi karo', 'abhi karo'."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("action", JSONObject().apply {
+                            put("type", "STRING")
+                            put(
+                                "description",
+                                "list | cancel | delay | earlier | fire_now | clear_all"
+                            )
+                        })
+                        put("query", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "Reminder text to match, e.g. 'gym'. Empty for all.")
+                        })
+                        put("minutes", JSONObject().apply {
+                            put("type", "INTEGER")
+                            put("description", "Minutes for delay/earlier.")
+                        })
+                    })
+                    put("required", JSONArray().put("action"))
+                })
+            }))
+        })
+
         return arr
     }
     fun sendToolResponses(responses: List<ToolResponse>) {
