@@ -122,6 +122,22 @@ object AeroTools {
             ToolResponse(call.id, call.name, JSONObject().put("status", status))
         }
 
+        "youtube_control" -> {
+            val action = call.args.optString("action").trim().lowercase()
+            val status = when (action) {
+                "play" -> YouTubeControl.mediaPlayPause(ctx, true)
+                "pause" -> YouTubeControl.mediaPlayPause(ctx, false)
+                "toggle" -> YouTubeControl.mediaPlayPause(ctx, null)
+                "set_speed" -> {
+                    val speed = call.args.optString("speed").trim().ifEmpty { "2x" }
+                    YouTubeControl.setSpeed(ctx, if (speed == "normal") "Normal" else speed)
+                    "$speed speed laga raha hoon…"
+                }
+                else -> "Unknown youtube action: $action"
+            }
+            ToolResponse(call.id, call.name, JSONObject().put("status", status))
+        }
+
         else -> null
     }
 }

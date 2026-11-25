@@ -385,5 +385,9 @@ class AeroAccessibilityService : AccessibilityService() {
             svc.handler.post { svc.performClearNotifications() }
             return true
         }
+
+        /** Package name of the current top window (or null). */
+        fun currentPackage(): String? =
+            liveService?.rootInActiveWindow?.packageName?.toString()
     }
 }

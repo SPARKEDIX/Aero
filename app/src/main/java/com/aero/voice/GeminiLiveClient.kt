@@ -743,6 +743,32 @@ class GeminiLiveClient(
             }))
         })
 
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "youtube_control")
+                put(
+                    "description",
+                    "Control YouTube playback: play, pause, or change playback speed " +
+                        "(2x, 1.5x, 0.5x, normal). Use when the user says things like " +
+                        "'youtube play karo', 'video pause karo', '2x karo'."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("action", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "play | pause | toggle | set_speed")
+                        })
+                        put("speed", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "For set_speed: 2x, 1.5x, 0.5x, Normal")
+                        })
+                    })
+                    put("required", JSONArray().put("action"))
+                })
+            }))
+        })
+
         return arr
     }
     fun sendToolResponses(responses: List<ToolResponse>) {

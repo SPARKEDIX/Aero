@@ -150,6 +150,8 @@ object AppControl {
         data class EarlierReminder(val query: String, val minutes: Int) : Command()
         data class FireReminderNow(val query: String) : Command()
         object ClearAllReminders : Command()
+        data class YoutubePlayPause(val play: Boolean?) : Command()
+        data class YoutubeSpeed(val label: String) : Command()
     }
 
     private val openRe = Regex(
@@ -336,6 +338,33 @@ object AppControl {
             Regex("(?i)\\b(cancel|band|khatam|hatao|remove)\\b.*\\b(reminder|reminders|yaad)\\b").containsMatchIn(t)
         ) {
             return Command.CancelReminder(reminderTarget(t))
+        }
+
+        // ---- YouTube ----
+        // "youtube play karo" / "video chalao" / "play kar"
+        if (Regex("(?i)\\b(youtube|yt|video|song)\\b.*\\b(play|chalao|chala|chal|start|shuru)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(play|chalao|chala|chal)\\b.*\\b(youtube|yt|video|song)\\b").containsMatchIn(t)
+        ) {
+            return Command.YoutubePlayPause(true)
+        }
+        // "youtube pause karo" / "video ruko" / "ruk ja"
+        if (Regex("(?i)\\b(youtube|yt|video|song)\\b.*\\b(pause|ruko|ruk|stop|band)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(pause|ruko|ruk|stop)\\b.*\\b(youtube|yt|video|song)\\b").containsMatchIn(t)
+        ) {
+            return Command.YoutubePlayPause(false)
+        }
+        // Speed: "2x karo" / "double speed" / "speed 2x" / "1.5x"
+        if (Regex("(?i)\\b(2x|2\\s*x|double speed|double|speed 2|speed 2x|do guna)\\b").containsMatchIn(t)) {
+            return Command.YoutubeSpeed("2x")
+        }
+        if (Regex("(?i)\\b(1\\.5x|1\\.5\\s*x|1.5|sawa guna)\\b").containsMatchIn(t)) {
+            return Command.YoutubeSpeed("1.5x")
+        }
+        if (Regex("(?i)\\b(0\\.5x|0\\.5|aadha|half speed|0.5)\\b").containsMatchIn(t)) {
+            return Command.YoutubeSpeed("0.5x")
+        }
+        if (Regex("(?i)\\b(speed normal|normal speed|1x|1\\s*x)\\b").containsMatchIn(t)) {
+            return Command.YoutubeSpeed("Normal")
         }
 
         // Memory: "yaad rakho mera naam Kartik hai" / "remember that ..."
@@ -551,5 +580,10 @@ object AppControl {
         is Command.EarlierReminder -> ReminderManager.earlier(ctx, command.query, command.minutes)
         is Command.FireReminderNow -> ReminderManager.fireNow(ctx, command.query)
         is Command.ClearAllReminders -> ReminderManager.clearAll(ctx)
+        is Command.YoutubePlayPause -> YouTubeControl.mediaPlayPause(ctx, command.play)
+        is Command.YoutubeSpeed -> {
+            YouTubeControl.setSpeed(ctx, command.label)
+            "${command.label} speed laga raha hoon… (YouTube khulna chahiye)"
+        }
     }
 }
