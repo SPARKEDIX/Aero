@@ -29,11 +29,14 @@ class AeroAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
-        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            // After opening Overview, try to find and click "Clear all".
-            while (activeOverviewOpen > 0) {
-                activeOverviewOpen--
-                clickClearAll()
+        when (event.eventType) {
+            AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED -> captureNotification(event)
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                // After opening Overview, try to find and click "Clear all".
+                while (activeOverviewOpen > 0) {
+                    activeOverviewOpen--
+                    clickClearAll()
+                }
             }
         }
     }
@@ -158,6 +161,71 @@ class AeroAccessibilityService : AccessibilityService() {
         for (i in 0 until node.childCount) {
             node.getChild(i)?.let { collectAll(it, out) }
         }
+    }
+
+    // ---- Scroll ----
+
+    private fun performScroll(forward: Boolean) {
+        val root = rootInActiveWindow ?: return
+        val nodes = ArrayList<AccessibilityNodeInfo>()
+        collectAll(root, nodes)
+        for (n in nodes) {
+            if (n.isScrollable) {
+                val action = if (forward) {
+                    AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
+                } else {
+                    AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
+                }
+                n.performAction(action)
+                Log.d(TAG, if (forward) "scrolled forward" else "scrolled backward")
+                return
+            }
+        }
+        Log.d(TAG, "no scrollable node found")
+    }
+
+    // ---- Notifications (live capture) ----
+
+    private val recentNotifications = ArrayDeque<String>()
+
+    private fun captureNotification(event: AccessibilityEvent) {
+        val text = event.text?.joinToString(" ")?.trim().orEmpty()
+        if (text.isNotEmpty()) {
+            recentNotifications.addLast(text)
+            while (recentNotifications.size > 15) recentNotifications.removeFirst()
+        }
+    }
+
+    private fun performNotificationsDump(): String {
+        return if (recentNotifications.isEmpty()) {
+            "(no notifications captured yet)"
+        } else {
+            recentNotifications.joinToString(" | ")
+        }
+    }
+
+    private fun performClearNotifications() {
+        // Open the notification shade, then try to find Clear all / Dismiss.
+        try { performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS) } catch (_: Throwable) {}
+        handler.postDelayed({
+            val root = rootInActiveWindow ?: return@postDelayed
+            val nodes = ArrayList<AccessibilityNodeInfo>()
+            collectAll(root, nodes)
+            val labels = listOf("clear all", "clear notifications", "dismiss all", "saaf karo", "clear")
+            for (n in nodes) {
+                val txt = n.text?.toString()?.lowercase() ?: ""
+                val desc = n.contentDescription?.toString()?.lowercase() ?: ""
+                if (labels.any { txt.contains(it) || desc.contains(it) }) {
+                    val clickable = if (n.isClickable) n else n.parent?.takeIf { it.isClickable }
+                    if (clickable != null) {
+                        clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                        Log.d(TAG, "notification clear-all tapped")
+                    }
+                    return@postDelayed
+                }
+            }
+            Log.d(TAG, "notification clear-all not found")
+        }, 2000L)
     }
 
     // ---- Screen-text dump (text "screenshot" for the model) ----
@@ -286,6 +354,35 @@ class AeroAccessibilityService : AccessibilityService() {
             if (!isEnabled()) return false
             val svc = liveService ?: return false
             svc.handler.post { svc.waitThenTap(text, timeoutMs) }
+            return true
+        }
+
+        /** Scrolls the current scrollable screen (forward=true → down). */
+        fun requestScroll(forward: Boolean): Boolean {
+            if (!isEnabled()) return false
+            val svc = liveService ?: return false
+            svc.handler.post { svc.performScroll(forward) }
+            return true
+        }
+
+        /** Reads the recent notifications as text via [onResult] (main thread). */
+        fun requestNotificationsDump(onResult: (String) -> Unit) {
+            val svc = liveService
+            if (svc == null || !isEnabled()) {
+                onResult("(accessibility not enabled)")
+                return
+            }
+            svc.handler.post {
+                val dump = svc.performNotificationsDump()
+                android.os.Handler(android.os.Looper.getMainLooper()).post { onResult(dump) }
+            }
+        }
+
+        /** Best-effort: opens the notification shade and taps Clear all. */
+        fun requestClearNotifications(): Boolean {
+            if (!isEnabled()) return false
+            val svc = liveService ?: return false
+            svc.handler.post { svc.performClearNotifications() }
             return true
         }
     }

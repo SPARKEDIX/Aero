@@ -144,4 +144,49 @@ object DeviceActions {
             "I need accessibility permission to go back."
         }
     }
+
+    // ---- Camera (model-controlled, front/back) ----
+
+    /**
+     * Turns the live camera on with the requested lens. Sends an intent to
+     * MainActivity (which owns the CameraX pipeline). Returns a spoken result.
+     */
+    fun cameraLive(ctx: Context, lens: String?): String {
+        return try {
+            val intent = Intent(ctx, MainActivity::class.java).apply {
+                action = FloatingOrbService.ACTION_OPEN_CAMERA
+                putExtra(MainActivity.EXTRA_LENS, lens ?: "back")
+                putExtra(MainActivity.EXTRA_CAMERA_ON, true)
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                )
+            }
+            ctx.startActivity(intent)
+            val which = if (lens.equals("front", ignoreCase = true)) "front" else "back"
+            "Turning on the $which camera."
+        } catch (t: Throwable) {
+            Log.e(TAG, "camera launch failed", t)
+            "I couldn't turn on the camera."
+        }
+    }
+
+    /** Turns the live camera off. */
+    fun cameraStop(ctx: Context): String {
+        return try {
+            val intent = Intent(ctx, MainActivity::class.java).apply {
+                action = FloatingOrbService.ACTION_OPEN_CAMERA
+                putExtra(MainActivity.EXTRA_CAMERA_ON, false)
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                )
+            }
+            ctx.startActivity(intent)
+            "Turning off the camera."
+        } catch (t: Throwable) {
+            Log.e(TAG, "camera stop failed", t)
+            "I couldn't turn off the camera."
+        }
+    }
 }

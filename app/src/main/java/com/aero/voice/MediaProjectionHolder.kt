@@ -34,6 +34,10 @@ object MediaProjectionHolder {
     private var running = false
     private var frameNo = 0
 
+    /** Latest JPEG frame (for on-demand screenshots). Volatile, never stored. */
+    @Volatile
+    var latestJpeg: ByteArray? = null
+
     val isRunning: Boolean get() = running
 
     fun start(app: Context, code: Int, data: Intent) {
@@ -95,6 +99,7 @@ object MediaProjectionHolder {
                     bitmap.recycle()
                     frameNo++
                     val jpeg = baos.toByteArray()
+                    latestJpeg = jpeg
 
                     // Same path as camera frames — send, never store.
                     AeroState.liveClient?.sendImage(jpeg)

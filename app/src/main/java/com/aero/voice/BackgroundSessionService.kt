@@ -182,6 +182,64 @@ class BackgroundSessionService : Service() {
                                 val spoken = DeviceActions.goBack(this@BackgroundSessionService)
                                 ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
                             }
+                            "camera_live" -> {
+                                val lens = call.args.optString("lens", "back").trim()
+                                val spoken = DeviceActions.cameraLive(this@BackgroundSessionService, lens)
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
+                            "camera_stop" -> {
+                                val spoken = DeviceActions.cameraStop(this@BackgroundSessionService)
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
+                            "read_notifications" -> {
+                                AeroAccessibilityService.requestNotificationsDump { dump ->
+                                    client?.sendContextText("Notifications: $dump")
+                                }
+                                ToolResponse(call.id, call.name, JSONObject().put("status", "reading notifications"))
+                            }
+                            "clear_notifications" -> {
+                                val spoken = if (AeroAccessibilityService.requestClearNotifications()) {
+                                    "clearing notifications"
+                                } else {
+                                    "accessibility not enabled"
+                                }
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
+                            "scroll_down" -> {
+                                val spoken = if (AeroAccessibilityService.requestScroll(true)) "scrolling down" else "accessibility not enabled"
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
+                            "scroll_up" -> {
+                                val spoken = if (AeroAccessibilityService.requestScroll(false)) "scrolling up" else "accessibility not enabled"
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
+                            "torch_set" -> {
+                                val on = call.args.optBoolean("on", true)
+                                val spoken = DeviceControl.torch(this@BackgroundSessionService, on)
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
+                            "bluetooth_set" -> {
+                                val on = call.args.optBoolean("on", true)
+                                val spoken = DeviceControl.bluetooth(this@BackgroundSessionService, on)
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
+                            "set_brightness" -> {
+                                val percent = call.args.optInt("percent", 50)
+                                val spoken = DeviceControl.brightness(this@BackgroundSessionService, percent * 255 / 100)
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
+                            "take_screenshot" -> {
+                                val spoken = DeviceControl.screenshot(this@BackgroundSessionService)
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
+                            "open_wifi_settings" -> {
+                                val spoken = DeviceControl.openWifiSettings(this@BackgroundSessionService)
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
+                            "open_data_settings" -> {
+                                val spoken = DeviceControl.openDataSettings(this@BackgroundSessionService)
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
                             "web_search" -> ToolResponse(
                                 call.id, call.name,
                                 JSONObject().put("error", "web search not available in background session")

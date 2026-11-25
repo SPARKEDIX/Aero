@@ -387,6 +387,183 @@ class GeminiLiveClient(
             }))
         })
 
+        // camera_live — let the model look through the camera itself
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "camera_live")
+                put(
+                    "description",
+                    "Turn on the live camera so you can SEE the real world around the user. " +
+                        "Choose which lens to use: 'back' (what's in front of the phone) or 'front' (the user's face). " +
+                        "Use this when the user asks what you see, or wants you to look at something / someone."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("lens", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "'back' or 'front'.")
+                        })
+                    })
+                    put("required", JSONArray().put("lens"))
+                })
+            }))
+        })
+
+        // camera_stop
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "camera_stop")
+                put("description", "Turn off the live camera.")
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject())
+                    put("required", JSONArray())
+                })
+            }))
+        })
+
+        // Read notifications
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "read_notifications")
+                put("description", "Read the user's recent notifications.")
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject())
+                    put("required", JSONArray())
+                })
+            }))
+        })
+
+        // Clear notifications
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "clear_notifications")
+                put("description", "Clear / dismiss the user's notifications.")
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject())
+                    put("required", JSONArray())
+                })
+            }))
+        })
+
+        // scroll_down / scroll_up
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "scroll_down")
+                put("description", "Scroll the current screen down.")
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject())
+                    put("required", JSONArray())
+                })
+            }))
+        })
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "scroll_up")
+                put("description", "Scroll the current screen up.")
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject())
+                    put("required", JSONArray())
+                })
+            }))
+        })
+
+        // torch
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "torch_set")
+                put("description", "Turn the flashlight/torch on or off.")
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("on", JSONObject().apply {
+                            put("type", "BOOLEAN")
+                            put("description", "true to turn on, false to turn off.")
+                        })
+                    })
+                    put("required", JSONArray().put("on"))
+                })
+            }))
+        })
+
+        // bluetooth
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "bluetooth_set")
+                put("description", "Turn bluetooth on or off.")
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("on", JSONObject().apply {
+                            put("type", "BOOLEAN")
+                            put("description", "true to turn on, false to turn off.")
+                        })
+                    })
+                    put("required", JSONArray().put("on"))
+                })
+            }))
+        })
+
+        // brightness
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "set_brightness")
+                put("description", "Set screen brightness. Use 0-100 as percentage.")
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("percent", JSONObject().apply {
+                            put("type", "INTEGER")
+                            put("description", "Brightness percentage 0-100.")
+                        })
+                    })
+                    put("required", JSONArray().put("percent"))
+                })
+            }))
+        })
+
+        // screenshot
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "take_screenshot")
+                put("description", "Take a screenshot of the screen and save it to Pictures/Aero.")
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject())
+                    put("required", JSONArray())
+                })
+            }))
+        })
+
+        // wifi / data settings
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "open_wifi_settings")
+                put("description", "Open the WiFi settings screen.")
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject())
+                    put("required", JSONArray())
+                })
+            }))
+        })
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "open_data_settings")
+                put("description", "Open the mobile data settings screen.")
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject())
+                    put("required", JSONArray())
+                })
+            }))
+        })
+
         return arr
     }
 

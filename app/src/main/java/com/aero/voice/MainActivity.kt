@@ -157,6 +157,9 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     /** True while the screen picker was opened from the floating orb. */
     private var launchedFromOrb = false
 
+    /** Temporary holder for a notifications dump fetched during a tool call. */
+    private var pendingNotificationsDump: String? = null
+
     /** Fired by the floating orb's close button to force a full exit. */
     private val exitReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -308,10 +311,19 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             FloatingOrbService.ACTION_OPEN_CAMERA -> {
                 stopFloatingOrb()
                 stopProjection()
+                val lens = intent.getStringExtra(EXTRA_LENS)
+                if (lens != null) {
+                    lensFacing = if (lens.equals("front", ignoreCase = true)) {
+                        CameraSelector.LENS_FACING_FRONT
+                    } else {
+                        CameraSelector.LENS_FACING_BACK
+                    }
+                }
+                val turnOn = intent.getBooleanExtra(EXTRA_CAMERA_ON, true)
                 if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                     == PackageManager.PERMISSION_GRANTED
                 ) {
-                    toggleCameraLive()
+                    if (turnOn) openCameraLive() else closeCameraLive()
                 } else {
                     cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                 }
@@ -687,6 +699,71 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                             val spoken = DeviceActions.goBack(this@MainActivity)
                             ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
                         }
+                        "camera_live" -> {
+                            val lens = call.args.optString("lens", "back").trim()
+                            val spoken = DeviceActions.cameraLive(this@MainActivity, lens)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "camera_stop" -> {
+                            val spoken = DeviceActions.cameraStop(this@MainActivity)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "read_notifications" -> {
+                            AeroAccessibilityService.requestNotificationsDump { dump ->
+                                pendingNotificationsDump = dump
+                            }
+                            // Feed the dump after this batch responds.
+                            handler.postDelayed({
+                                pendingNotificationsDump?.let {
+                                    client?.sendContextText("Notifications: $it")
+                                    pendingNotificationsDump = null
+                                }
+                            }, 1500L)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", "reading notifications"))
+                        }
+                        "clear_notifications" -> {
+                            val spoken = if (AeroAccessibilityService.requestClearNotifications()) {
+                                "clearing notifications"
+                            } else {
+                                "accessibility not enabled"
+                            }
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "scroll_down" -> {
+                            val spoken = if (AeroAccessibilityService.requestScroll(true)) "scrolling down" else "accessibility not enabled"
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "scroll_up" -> {
+                            val spoken = if (AeroAccessibilityService.requestScroll(false)) "scrolling up" else "accessibility not enabled"
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "torch_set" -> {
+                            val on = call.args.optBoolean("on", true)
+                            val spoken = DeviceControl.torch(this@MainActivity, on)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "bluetooth_set" -> {
+                            val on = call.args.optBoolean("on", true)
+                            val spoken = DeviceControl.bluetooth(this@MainActivity, on)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "set_brightness" -> {
+                            val percent = call.args.optInt("percent", 50)
+                            val spoken = DeviceControl.brightness(this@MainActivity, percent * 255 / 100)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "take_screenshot" -> {
+                            val spoken = DeviceControl.screenshot(this@MainActivity)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "open_wifi_settings" -> {
+                            val spoken = DeviceControl.openWifiSettings(this@MainActivity)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "open_data_settings" -> {
+                            val spoken = DeviceControl.openDataSettings(this@MainActivity)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
                         else -> {
                             ToolResponse(
                                 call.id, call.name,
@@ -1029,6 +1106,8 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     companion object {
         const val ACTION_START_SCREEN = "com.aero.voice.START_SCREEN"
+        const val EXTRA_LENS = "camera_lens"
+        const val EXTRA_CAMERA_ON = "camera_on"
 
         /** Do not speak over the assistant: wait this long after its last audio chunk. */
         private const val SPEECH_GAP_MS = 3_000L

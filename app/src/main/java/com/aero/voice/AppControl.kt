@@ -122,6 +122,20 @@ object AppControl {
         data class Type(val target: String) : Command()
         object Home : Command()
         object Back : Command()
+        object ScrollDown : Command()
+        object ScrollUp : Command()
+        object ReadNotifications : Command()
+        object ClearNotifications : Command()
+        object TorchOn : Command()
+        object TorchOff : Command()
+        object BluetoothOn : Command()
+        object BluetoothOff : Command()
+        data class Brightness(val level: Int) : Command()
+        object Screenshot : Command()
+        object WifiSettings : Command()
+        object DataSettings : Command()
+        data class CameraLive(val lens: String) : Command()
+        object CameraStop : Command()
     }
 
     private val openRe = Regex(
@@ -181,6 +195,78 @@ object AppControl {
         if (backRe.containsMatchIn(t)) {
             return Command.Back
         }
+
+        // Torch
+        if (Regex("(?i)\\b(torch|flashlight|flash)\\b.*\\b(on|jalo|chalu|kholo)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(on|jalo|chalu)\\b.*\\b(torch|flashlight|flash)\\b").containsMatchIn(t)
+        ) return Command.TorchOn
+        if (Regex("(?i)\\b(torch|flashlight|flash)\\b.*\\b(off|band|bujhao|bujha)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(off|band|bujhao|bujha)\\b.*\\b(torch|flashlight|flash)\\b").containsMatchIn(t)
+        ) return Command.TorchOff
+
+        // Bluetooth
+        if (Regex("(?i)\\b(bluetooth|bt)\\b.*\\b(on|jalo|chalu)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(on|jalo|chalu)\\b.*\\b(bluetooth|bt)\\b").containsMatchIn(t)
+        ) return Command.BluetoothOn
+        if (Regex("(?i)\\b(bluetooth|bt)\\b.*\\b(off|band|bujhao)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(off|band|bujhao)\\b.*\\b(bluetooth|bt)\\b").containsMatchIn(t)
+        ) return Command.BluetoothOff
+
+        // Brightness
+        val br = Regex("(?i)\\b(brightness|brightness set|roshni|chamak)\\b.*?([0-9]{1,3})(?:%| percent)?").find(t)
+        if (br != null) {
+            val raw = br.groupValues[2].toIntOrNull()
+            if (raw != null) {
+                // 0-100% → 0-255 system scale.
+                return Command.Brightness((raw * 255 / 100).coerceIn(0, 255))
+            }
+        }
+        if (t.contains("brightness") || t.contains("roshni") || t.contains("chamak")) {
+            return Command.Brightness(128)
+        }
+
+        // Scroll
+        if (Regex("(?i)\\b(scroll down|neeche jao|scroll karo neeche|swipe up)\\b").containsMatchIn(t)) {
+            return Command.ScrollDown
+        }
+        if (Regex("(?i)\\b(scroll up|upar jao|swipe down)\\b").containsMatchIn(t)) {
+            return Command.ScrollUp
+        }
+
+        // Notifications
+        if (Regex("(?i)\\b(read|padho|padh|dikhao)\\b.*\\b(notification|notifications|notice)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(notification|notifications)\\b.*\\b(read|padho|padh|dikhao)\\b").containsMatchIn(t)
+        ) return Command.ReadNotifications
+        if (Regex("(?i)\\b(clear|saaf|band)\\b.*\\b(notification|notifications)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(notification|notifications)\\b.*\\b(clear|saaf|band)\\b").containsMatchIn(t)
+        ) return Command.ClearNotifications
+
+        // Screenshot
+        if (Regex("(?i)\\b(screenshot|screen shot|ss lo|photo lo|screenshot lo)\\b").containsMatchIn(t)) {
+            return Command.Screenshot
+        }
+
+        // Camera
+        if (Regex("(?i)\\b(front camera|selfie camera|camera front)\\b").containsMatchIn(t)) {
+            return Command.CameraLive("front")
+        }
+        if (Regex("(?i)\\b(back camera|camera back|rear camera)\\b").containsMatchIn(t)) {
+            return Command.CameraLive("back")
+        }
+        if (Regex("(?i)\\b(camera|camera kholo|camera on|live camera)\\b").containsMatchIn(t)) {
+            return Command.CameraLive("back")
+        }
+        if (Regex("(?i)\\b(camera band|camera off|band karo camera)\\b").containsMatchIn(t)) {
+            return Command.CameraStop
+        }
+
+        // WiFi / data settings
+        if (Regex("(?i)\\b(wifi|wi-fi)\\b.*\\b(on|off|chalu|band)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(on|off|chalu|band)\\b.*\\b(wifi|wi-fi)\\b").containsMatchIn(t)
+        ) return Command.WifiSettings
+        if (Regex("(?i)\\b(mobile data|data|internet)\\b.*\\b(on|off|chalu|band)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(on|off|chalu|band)\\b.*\\b(mobile data|data|internet)\\b").containsMatchIn(t)
+        ) return Command.DataSettings
 
         val whats = whatsAppMsgRe.find(t)
         if (whats != null) {
@@ -261,5 +347,24 @@ object AppControl {
         is Command.Type -> DeviceActions.typeText(ctx, command.target)
         is Command.Home -> DeviceActions.goHome(ctx)
         is Command.Back -> DeviceActions.goBack(ctx)
+        is Command.ScrollDown -> if (AeroAccessibilityService.requestScroll(true)) "Scrolling down." else "I need accessibility permission to scroll."
+        is Command.ScrollUp -> if (AeroAccessibilityService.requestScroll(false)) "Scrolling up." else "I need accessibility permission to scroll."
+        is Command.ReadNotifications -> {
+            AeroAccessibilityService.requestNotificationsDump { dump ->
+                AeroState.liveClient?.sendContextText("Notifications: $dump")
+            }
+            "Here are your recent notifications."
+        }
+        is Command.ClearNotifications -> if (AeroAccessibilityService.requestClearNotifications()) "Clearing notifications." else "I need accessibility permission to clear notifications."
+        is Command.TorchOn -> DeviceControl.torch(ctx, true)
+        is Command.TorchOff -> DeviceControl.torch(ctx, false)
+        is Command.BluetoothOn -> DeviceControl.bluetooth(ctx, true)
+        is Command.BluetoothOff -> DeviceControl.bluetooth(ctx, false)
+        is Command.Brightness -> DeviceControl.brightness(ctx, command.level)
+        is Command.Screenshot -> DeviceControl.screenshot(ctx)
+        is Command.WifiSettings -> DeviceControl.openWifiSettings(ctx)
+        is Command.DataSettings -> DeviceControl.openDataSettings(ctx)
+        is Command.CameraLive -> DeviceActions.cameraLive(ctx, command.lens)
+        is Command.CameraStop -> DeviceActions.cameraStop(ctx)
     }
 }
