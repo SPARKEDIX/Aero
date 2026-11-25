@@ -195,22 +195,17 @@ class FloatingOrbService : Service() {
 
     /** Overlay mute icon turns red while muted. */
     private fun updateOverlayMute() {
-        val mute = root.findViewById<ImageButton>(R.id.overlayMute)
-        val red = AeroState.micMuted
-        mute.imageTintList = android.content.res.ColorStateList.valueOf(
-            if (red) android.graphics.Color.WHITE else android.graphics.Color.WHITE
-        )
-        mute.backgroundTintList = android.content.res.ColorStateList.valueOf(
-            if (red) android.graphics.Color.parseColor("#EF4444") else 0x00000000
+        AeroUi.applyOverlayButton(
+            root.findViewById<ImageButton>(R.id.overlayMute),
+            if (AeroState.micMuted) AeroUi.State.DANGER else AeroUi.State.NORMAL
         )
     }
 
     /** Overlay screen-toggle icon turns red while sharing is OFF. */
     private fun updateOverlayScreenToggle() {
-        val toggle = root.findViewById<ImageButton>(R.id.overlayScreenToggle)
-        val running = MediaProjectionHolder.isRunning
-        toggle.backgroundTintList = android.content.res.ColorStateList.valueOf(
-            if (!running) android.graphics.Color.parseColor("#EF4444") else 0x00000000
+        AeroUi.applyOverlayButton(
+            root.findViewById<ImageButton>(R.id.overlayScreenToggle),
+            if (MediaProjectionHolder.isRunning) AeroUi.State.NORMAL else AeroUi.State.DANGER
         )
     }
 

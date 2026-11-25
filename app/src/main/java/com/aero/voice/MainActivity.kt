@@ -410,11 +410,9 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     private fun setMicActiveUI(active: Boolean) {
         micButton.setImageResource(if (active) R.drawable.ic_stop else R.drawable.ic_mic)
-        micButton.backgroundTintList = ColorStateList.valueOf(
-            if (active) getColor(R.color.orb_purple) else getColor(R.color.bg_circle)
-        )
-        micButton.imageTintList = ColorStateList.valueOf(
-            if (active) android.graphics.Color.WHITE else getColor(R.color.text_dark)
+        AeroUi.applyAppButton(
+            micButton,
+            if (active) AeroUi.State.ACTIVE else AeroUi.State.NORMAL
         )
         setActionsExpanded(active)
         if (active) {
@@ -429,21 +427,17 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
     /** Mute button turns red while the mic is muted. */
     private fun updateMuteButton() {
-        val tint = if (micMuted) getColor(R.color.red) else getColor(R.color.bg_circle)
-        muteButton.backgroundTintList = ColorStateList.valueOf(tint)
-        muteButton.imageTintList = ColorStateList.valueOf(
-            if (micMuted) android.graphics.Color.WHITE else getColor(R.color.text_dark)
+        AeroUi.applyAppButton(
+            muteButton,
+            if (micMuted) AeroUi.State.DANGER else AeroUi.State.NORMAL
         )
     }
 
     /** Screen-share button turns red while sharing is OFF. */
     private fun updateScreenShareButton() {
-        val running = MediaProjectionHolder.isRunning
-        val btn = findViewById<ImageButton>(R.id.screenShareButton)
-        val tint = if (running) getColor(R.color.bg_circle) else getColor(R.color.red)
-        btn.backgroundTintList = ColorStateList.valueOf(tint)
-        btn.imageTintList = ColorStateList.valueOf(
-            if (running) getColor(R.color.text_dark) else android.graphics.Color.WHITE
+        AeroUi.applyAppButton(
+            findViewById<ImageButton>(R.id.screenShareButton),
+            if (MediaProjectionHolder.isRunning) AeroUi.State.NORMAL else AeroUi.State.DANGER
         )
     }
 
