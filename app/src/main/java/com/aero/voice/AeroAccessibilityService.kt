@@ -11,32 +11,30 @@ import android.view.accessibility.AccessibilityNodeInfo
 
 /**
  * Accessibility service used for best-effort device automation:
- * - Opening Recents and pressing "Clear all".
- * - Tapping any visible element by its text/content description.
+ * - Tapping any visible element by its text/content description/resource-id.
  * - Typing into the focused field via clipboard paste.
- * - Ending calls (finding the end-call button).
- * - Home / Back global actions.
+ * - Ending calls and clearing recents (best effort, with retries).
  *
  * Users must enable this under Settings → Accessibility → Installed services.
  */
 class AeroAccessibilityService : AccessibilityService() {
 
-    private var drainPending = false
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         Log.d(TAG, "connected")
         liveService = this
-        drain()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
-        drain()
-        // After opening Overview, try to find and click "Clear all".
-        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && activeOverviewOpen > 0) {
-            activeOverviewOpen--
-            clickClearAll()
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            // After opening Overview, try to find and click "Clear all".
+            while (activeOverviewOpen > 0) {
+                activeOverviewOpen--
+                clickClearAll()
+            }
         }
     }
 
@@ -47,48 +45,42 @@ class AeroAccessibilityService : AccessibilityService() {
         super.onDestroy()
     }
 
-    // ---- Action queue ----
-
-    private fun drain() {
-        if (drainPending) return
-        var action: Action? = null
-        synchronized(actionLock) {
-            action = pendingActions.poll()
-        }
-        when (action) {
-            is Action.OpenRecents -> performGlobalAction(GLOBAL_ACTION_RECENTS)
-            is Action.ClickText -> performClickText(action.text)
-            is Action.TypeText -> performTypeText(action.text)
-            is Action.EndCall -> performEndCall()
-            is Action.Home -> performGlobalAction(GLOBAL_ACTION_HOME)
-            is Action.Back -> performGlobalAction(GLOBAL_ACTION_BACK)
-            else -> return
-        }
-        drainPending = false
-    }
+    // ---- Action execution (queue drained per request) ----
 
     private fun performClickText(text: String) {
-        val root = rootInActiveWindow ?: return
+        performClickText(text, 3)
+    }
+
+    private fun performClickText(text: String, attemptsLeft: Int) {
+        val clicked = tryFindAndClick(text)
+        if (clicked) return
+        if (attemptsLeft > 1) {
+            Log.d(TAG, "retry click \"$text\" (${attemptsLeft - 1} left)")
+            handler.postDelayed({ performClickText(text, attemptsLeft - 1) }, 1200L)
+        } else {
+            Log.d(TAG, "no node found for \"$text\"")
+        }
+    }
+
+    private fun tryFindAndClick(text: String): Boolean {
+        val root = rootInActiveWindow ?: return false
         val nodes = ArrayList<AccessibilityNodeInfo>()
         collectAll(root, nodes)
         val q = text.lowercase()
         for (n in nodes) {
             val txt = n.text?.toString()?.lowercase() ?: ""
             val desc = n.contentDescription?.toString()?.lowercase() ?: ""
-            if (txt.contains(q) || desc.contains(q)) {
+            val resId = n.viewIdResourceName?.lowercase() ?: ""
+            if (txt.contains(q) || desc.contains(q) || resId.contains(q)) {
                 val clickable = if (n.isClickable) n else n.parent?.takeIf { it.isClickable }
                 if (clickable != null) {
-                    clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    Log.d(TAG, "clicked \"$text\"")
-                } else {
-                    Log.w(TAG, "node \"$text\" not clickable")
+                    val ok = clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    Log.d(TAG, "clicked \"$text\" (ok=$ok)")
+                    return true
                 }
-                recycleAll(nodes)
-                return
             }
         }
-        Log.d(TAG, "no node found for \"$text\"")
-        recycleAll(nodes)
+        return false
     }
 
     private fun performTypeText(text: String) {
@@ -104,7 +96,6 @@ class AeroAccessibilityService : AccessibilityService() {
         }
         if (editable == null) {
             Log.w(TAG, "no editable field found")
-            recycleAll(nodes)
             return
         }
         editable.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
@@ -112,53 +103,54 @@ class AeroAccessibilityService : AccessibilityService() {
         cm.setPrimaryClip(ClipData.newPlainText("aero", text))
         editable.performAction(AccessibilityNodeInfo.ACTION_PASTE)
         Log.d(TAG, "typed into field")
-        recycleAll(nodes)
     }
 
     private fun performEndCall() {
         val root = rootInActiveWindow ?: return
         val nodes = ArrayList<AccessibilityNodeInfo>()
         collectAll(root, nodes)
-        val keyLabels = listOf("end call", "end", "disconnect", "hang up", "call end", "decline")
+        val keyLabels = listOf("end call", "end", "disconnect", "hang up", "call end", "decline", "call_button_end")
         for (n in nodes) {
             val txt = n.text?.toString()?.lowercase() ?: ""
             val desc = n.contentDescription?.toString()?.lowercase() ?: ""
-            if (keyLabels.any { txt.contains(it) || desc.contains(it) }) {
+            val resId = n.viewIdResourceName?.lowercase() ?: ""
+            if (keyLabels.any { txt.contains(it) || desc.contains(it) || resId.contains(it) }) {
                 val clickable = if (n.isClickable) n else n.parent?.takeIf { it.isClickable }
                 if (clickable != null) {
                     clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                     Log.d(TAG, "end-call tapped")
                 }
-                recycleAll(nodes)
                 return
             }
         }
         Log.d(TAG, "end-call button not found")
-        recycleAll(nodes)
     }
 
     private fun clickClearAll() {
         val root = rootInActiveWindow ?: return
         val nodes = ArrayList<AccessibilityNodeInfo>()
         collectAll(root, nodes)
-        val labels = listOf("clear all", "clear", "saaf karo", "close all", "all clear")
+        val labels = listOf(
+            "clear all", "clr_all", "close all", "remove all", "saaf karo",
+            "clear", "remove", "clear_recents", "clearall", "recents_clear_all"
+        )
         for (n in nodes) {
             val txt = n.text?.toString()?.lowercase() ?: ""
             val desc = n.contentDescription?.toString()?.lowercase() ?: ""
-            if (labels.any { txt.contains(it) || desc.contains(it) }) {
+            val resId = n.viewIdResourceName?.lowercase() ?: ""
+            if (labels.any { txt.contains(it) || desc.contains(it) || resId.contains(it) }) {
                 val clickable = if (n.isClickable) n else n.parent?.takeIf { it.isClickable }
                 if (clickable != null) {
                     clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                     Log.d(TAG, "clicked clear-all")
-                } else {
-                    Log.w(TAG, "clear-all node not clickable")
+                    return
                 }
-                recycleAll(nodes)
-                return
             }
         }
-        Log.d(TAG, "clear-all button not found in accessibility tree")
-        recycleAll(nodes)
+        // Retry once after a beat (overview animations can take time).
+        handler.postDelayed({
+            rootInActiveWindow?.let { clickClearAll() }
+        }, 1500L)
     }
 
     private fun collectAll(node: AccessibilityNodeInfo, out: MutableList<AccessibilityNodeInfo>) {
@@ -168,31 +160,11 @@ class AeroAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun recycleAll(nodes: List<AccessibilityNodeInfo>) {
-        nodes.forEach { it.recycle() }
-    }
-
-    private fun openRecents() {
-        activeOverviewOpen++
-        performGlobalAction(GLOBAL_ACTION_RECENTS)
-    }
-
     companion object {
         private const val TAG = "AeroA11y"
-        private val actionLock = Any()
-        private val pendingActions = java.util.concurrent.ConcurrentLinkedQueue<Action>()
 
         @Volatile private var liveService: AeroAccessibilityService? = null
         @Volatile private var activeOverviewOpen = 0
-
-        private sealed class Action {
-            object OpenRecents : Action()
-            data class ClickText(val text: String) : Action()
-            data class TypeText(val text: String) : Action()
-            object EndCall : Action()
-            object Home : Action()
-            object Back : Action()
-        }
 
         /** True if this accessibility service is enabled on the device. */
         fun isEnabled(): Boolean {
@@ -213,49 +185,52 @@ class AeroAccessibilityService : AccessibilityService() {
 
         fun requestClearRecents(): Boolean {
             if (!isEnabled()) return false
-            synchronized(actionLock) { pendingActions.add(Action.OpenRecents) }
-            pump()
-            return true
+            activeOverviewOpen++
+            val svc = liveService
+            if (svc != null) {
+                try { svc.performGlobalAction(GLOBAL_ACTION_RECENTS) } catch (_: Throwable) {}
+                return true
+            }
+            return false
         }
 
-        fun requestClickByText(text: String): Boolean {
+        fun requestClickByText(text: String, attempt: Int = 0): Boolean {
             if (!isEnabled()) return false
-            synchronized(actionLock) { pendingActions.add(Action.ClickText(text)) }
-            pump()
+            val svc = liveService ?: return false
+            if (attempt > 0) {
+                svc.handler.postDelayed({ svc.performClickText(text) }, 2500L)
+            } else {
+                svc.performClickText(text)
+            }
             return true
         }
 
         fun requestTypeText(text: String): Boolean {
             if (!isEnabled()) return false
-            synchronized(actionLock) { pendingActions.add(Action.TypeText(text)) }
-            pump()
+            val svc = liveService ?: return false
+            svc.performTypeText(text)
             return true
         }
 
         fun requestEndCall(): Boolean {
             if (!isEnabled()) return false
-            synchronized(actionLock) { pendingActions.add(Action.EndCall) }
-            pump()
+            val svc = liveService ?: return false
+            svc.handler.postDelayed({ svc.performEndCall() }, 800L)
             return true
         }
 
         fun requestHome(): Boolean {
             if (!isEnabled()) return false
-            synchronized(actionLock) { pendingActions.add(Action.Home) }
-            pump()
+            val svc = liveService ?: return false
+            try { svc.performGlobalAction(GLOBAL_ACTION_HOME) } catch (_: Throwable) {}
             return true
         }
 
         fun requestBack(): Boolean {
             if (!isEnabled()) return false
-            synchronized(actionLock) { pendingActions.add(Action.Back) }
-            pump()
+            val svc = liveService ?: return false
+            try { svc.performGlobalAction(GLOBAL_ACTION_BACK) } catch (_: Throwable) {}
             return true
-        }
-
-        private fun pump() {
-            val svc = liveService
-            if (svc != null) svc.drain()
         }
     }
 }

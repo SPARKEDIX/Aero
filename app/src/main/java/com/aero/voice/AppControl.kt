@@ -93,7 +93,8 @@ object AppControl {
         return if (sent) {
             "Opening the recent apps screen to clear it."
         } else {
-            "I need accessibility permission to clear recent apps. Please enable Aero in Settings → Accessibility → Installed services."
+            "I need accessibility permission to clear recent apps. Opening settings for you…"
+                .also { ScreenShareHelper.openAccessibilitySettings(ctx) }
         }
     }
 

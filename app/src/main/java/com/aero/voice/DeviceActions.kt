@@ -30,22 +30,43 @@ object DeviceActions {
 
     /** Opens WhatsApp with a pre-filled message; auto-send if accessibility is on. */
     fun whatsAppMessage(ctx: Context, target: String, message: String): String {
-        val number = ContactHelper.findNumber(ctx, target)
-        if (number == null) return "I couldn't find a contact or number for $target."
+        // Ensure contacts permission is granted so we can look up names.
+        val number = try {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(
+                    ctx, android.Manifest.permission.READ_CONTACTS
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                ContactHelper.findNumber(ctx, target)
+            } else {
+                null
+            }
+        } catch (_: Throwable) {
+            null
+        }
+        if (number == null) {
+            return "I need your contacts permission to find \"$target\". Please grant contacts access once."
+        }
         val clean = number.replace(Regex("[^0-9]"), "")
+        if (clean.isEmpty()) return "I couldn't get a number for $target."
         return try {
-            val uri = Uri.parse("https://wa.me/$clean?text=${Uri.encode(message)}")
+            // whatsapp://send is the reliable deep link that opens the chat
+            // with text pre-filled. wa.me can open a browser on some devices.
+            val uri = Uri.parse("whatsapp://send?phone=$clean&text=${Uri.encode(message)}")
             val intent = Intent(Intent.ACTION_VIEW, uri)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             ctx.startActivity(intent)
+
             if (AeroAccessibilityService.isEnabled()) {
-                // Give WhatsApp a moment to open the chat, then tap Send.
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    AeroAccessibilityService.requestClickByText("send")
-                }, 2500L)
+                // Give WhatsApp a moment to open the chat, then tap Send with retries.
+                val h = android.os.Handler(android.os.Looper.getMainLooper())
+                for ((delay, index) in listOf(2500L to 0, 4000L to 1, 6000L to 2)) {
+                    h.postDelayed({
+                        AeroAccessibilityService.requestClickByText("send", index)
+                    }, delay)
+                }
                 "Opening WhatsApp to send the message to $target."
             } else {
-                "WhatsApp is open with your message ready — press send to deliver it."
+                "WhatsApp is open with your message ready — enable Aero accessibility to auto-send."
             }
         } catch (t: Throwable) {
             Log.e(TAG, "whatsapp failed", t)
@@ -77,27 +98,34 @@ object DeviceActions {
             AeroAccessibilityService.requestEndCall()
             "Trying to end the call."
         } else {
-            "I need accessibility permission to end calls. Please enable Aero in Settings → Accessibility."
+            "I need accessibility permission to end calls. Opening settings for you…"
+                .also { ScreenShareHelper.openAccessibilitySettings(ctx) }
         }
     }
 
     /** Sends a generic click on any text/button in the current screen. */
     fun clickByText(ctx: Context, text: String): String {
+        // If the model needs to SEE the screen to click accurately, ensure
+        // screen-share consent is active (user accepts the system dialog).
+        ScreenShareHelper.ensureScreenShare(ctx)
         return if (AeroAccessibilityService.isEnabled()) {
             AeroAccessibilityService.requestClickByText(text)
             "Tapping \"$text\" on the screen."
         } else {
-            "I need accessibility permission to tap the screen. Please enable Aero in Settings → Accessibility."
+            "I need accessibility permission to tap the screen. Opening settings for you…"
+                .also { ScreenShareHelper.openAccessibilitySettings(ctx) }
         }
     }
 
     /** Types text into the currently focused field via clipboard paste. */
     fun typeText(ctx: Context, text: String): String {
+        ScreenShareHelper.ensureScreenShare(ctx)
         return if (AeroAccessibilityService.isEnabled()) {
             AeroAccessibilityService.requestTypeText(text)
             "Typing on the screen."
         } else {
-            "I need accessibility permission to type. Please enable Aero in Settings → Accessibility."
+            "I need accessibility permission to type. Opening settings for you…"
+                .also { ScreenShareHelper.openAccessibilitySettings(ctx) }
         }
     }
 
