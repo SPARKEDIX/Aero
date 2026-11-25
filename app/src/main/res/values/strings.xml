@@ -26,6 +26,7 @@
     <string name="settings_save">Save</string>
     <string name="settings_assistant_button">Set Aero as default assistant</string>
     <string name="settings_assistant_helper">Replaces the current digital assistant (e.g. Gemini) with Aero when you hold the Home button / use the assistant gesture.</string>
+    <string name="accessibility_service_desc">Lets Aero open the recent apps screen and clear it when you ask. Also used to help control apps.</string>
     <string name="settings_hotword_label">Wake command</string>
     <string name="settings_hotword_helper">Say this to summon Aero. Always listening while Aero has microphone permission.</string>
     <string name="settings_wake_label">Custom wake command (optional)</string>

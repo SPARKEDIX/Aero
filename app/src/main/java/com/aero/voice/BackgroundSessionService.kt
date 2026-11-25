@@ -14,6 +14,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.ServiceCompat
+import org.json.JSONObject
 
 /**
  * Invisible voice session started by the hotword listener (or an intent).
@@ -100,6 +101,15 @@ class BackgroundSessionService : Service() {
                     if (DismissIntents.matches(text)) {
                         Log.d(TAG, "dismiss intent heard: \"$text\"")
                         handler.post { dismiss() }
+                        return
+                    }
+                    // App-control voice commands ("open whatsapp", "clear recents").
+                    val cmd = AppControl.parse(text)
+                    if (cmd != null) {
+                        Log.d(TAG, "app command heard: \"$text\" -> $cmd")
+                        val spoken = AppControl.run(this@BackgroundSessionService, cmd)
+                        // Let the model narrate the result.
+                        client?.sendContextText("[Action performed] $spoken")
                     }
                 }
                 override fun onAssistantText(text: String) {}
@@ -116,6 +126,34 @@ class BackgroundSessionService : Service() {
                 }
                 override fun onError(message: String) {
                     Log.w(TAG, "session error: $message")
+                }
+                override fun onToolCall(calls: List<ToolCall>) {
+                    val responses = calls.map { call ->
+                        when (call.name) {
+                            "open_app", "close_app" -> {
+                                val appName = call.args.optString("app_name").trim()
+                                val spoken = if (call.name == "open_app") {
+                                    AppControl.openApp(this@BackgroundSessionService, appName)
+                                } else {
+                                    AppControl.closeApp(this@BackgroundSessionService, appName)
+                                }
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
+                            "clear_recents" -> {
+                                val spoken = AppControl.clearRecents(this@BackgroundSessionService)
+                                ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                            }
+                            "web_search" -> ToolResponse(
+                                call.id, call.name,
+                                JSONObject().put("error", "web search not available in background session")
+                            )
+                            else -> ToolResponse(
+                                call.id, call.name,
+                                JSONObject().put("error", "unknown tool ${call.name}")
+                            )
+                        }
+                    }
+                    client?.sendToolResponses(responses)
                 }
                 override fun onClose(code: Int, reason: String) {
                     handler.post { dismiss() }

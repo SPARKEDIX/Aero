@@ -147,27 +147,92 @@ class GeminiLiveClient(
         ws?.send(payload.toString())
     }
 
-    private fun buildTools(): JSONArray = JSONArray().put(JSONObject().apply {
-        put("functionDeclarations", JSONArray().put(JSONObject().apply {
-            put("name", "web_search")
-            put(
-                "description",
-                "Search the live internet for current information from multiple websites. " +
-                    "Use for news, weather, prices, sports, recent events, or anything that " +
-                    "may have changed after your training data."
-            )
-            put("parameters", JSONObject().apply {
-                put("type", "OBJECT")
-                put("properties", JSONObject().apply {
-                    put("query", JSONObject().apply {
-                        put("type", "STRING")
-                        put("description", "The search query, e.g. 'latest AI news' or 'weather in Mumbai'.")
+    private fun buildTools(): JSONArray {
+        val arr = JSONArray()
+
+        // web_search
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "web_search")
+                put(
+                    "description",
+                    "Search the live internet for current information from multiple websites. " +
+                        "Use for news, weather, prices, sports, recent events, or anything that " +
+                        "may have changed after your training data."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("query", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "The search query, e.g. 'latest AI news' or 'weather in Mumbai'.")
+                        })
                     })
+                    put("required", JSONArray().put("query"))
                 })
-                put("required", JSONArray().put("query"))
-            })
-        }))
-    })
+            }))
+        })
+
+        // open_app
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "open_app")
+                put(
+                    "description",
+                    "Open an app on the user's phone. Use the app's display name, e.g. 'WhatsApp', 'Chrome', 'YouTube'."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("app_name", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "Display name of the app to open.")
+                        })
+                    })
+                    put("required", JSONArray().put("app_name"))
+                })
+            }))
+        })
+
+        // close_app
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "close_app")
+                put(
+                    "description",
+                    "Close or minimize an app on the user's phone. Use the app's display name."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("app_name", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "Display name of the app to close or minimize.")
+                        })
+                    })
+                    put("required", JSONArray().put("app_name"))
+                })
+            }))
+        })
+
+        // clear_recents
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "clear_recents")
+                put(
+                    "description",
+                    "Open the recent apps screen and clear all recent apps."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject())
+                    put("required", JSONArray())
+                })
+            }))
+        })
+
+        return arr
+    }
 
     /** Send one or more function responses. Gemini continues the turn after this. */
     fun sendToolResponses(responses: List<ToolResponse>) {

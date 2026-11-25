@@ -553,6 +553,16 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                 stopProjection()
                 stopFloatingOrb()
             }
+            return
+        }
+        // App-control voice commands ("open whatsapp", "clear recents").
+        val cmd = AppControl.parse(text)
+        if (cmd != null) {
+            Log.d("AeroApp", "app command heard: \"$text\" -> $cmd")
+            handler.post {
+                val spoken = AppControl.run(this, cmd)
+                client?.sendContextText("[Action performed] $spoken")
+            }
         }
     }
 
@@ -589,17 +599,40 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             // then their responses are sent together.
             val responses = calls.map { call ->
                 async {
-                    val query = call.args.optString("query").trim()
-                    val result = if (query.isEmpty()) {
-                        JSONObject().put("error", "empty search query")
-                    } else {
-                        try {
-                            searchOrchestrator.search(query).toJson()
-                        } catch (t: Throwable) {
-                            JSONObject().put("error", t.message ?: "search failed")
+                    when (call.name) {
+                        "web_search" -> {
+                            val query = call.args.optString("query").trim()
+                            val result = if (query.isEmpty()) {
+                                JSONObject().put("error", "empty search query")
+                            } else {
+                                try {
+                                    searchOrchestrator.search(query).toJson()
+                                } catch (t: Throwable) {
+                                    JSONObject().put("error", t.message ?: "search failed")
+                                }
+                            }
+                            ToolResponse(call.id, call.name, result)
+                        }
+                        "open_app", "close_app" -> {
+                            val appName = call.args.optString("app_name").trim()
+                            val spoken = if (call.name == "open_app") {
+                                AppControl.openApp(this@MainActivity, appName)
+                            } else {
+                                AppControl.closeApp(this@MainActivity, appName)
+                            }
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        "clear_recents" -> {
+                            val spoken = AppControl.clearRecents(this@MainActivity)
+                            ToolResponse(call.id, call.name, JSONObject().put("status", spoken))
+                        }
+                        else -> {
+                            ToolResponse(
+                                call.id, call.name,
+                                JSONObject().put("error", "unknown tool ${call.name}")
+                            )
                         }
                     }
-                    ToolResponse(call.id, call.name, result)
                 }
             }.awaitAll()
 
