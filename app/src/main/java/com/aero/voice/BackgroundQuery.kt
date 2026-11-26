@@ -35,11 +35,13 @@ object BackgroundQuery {
     private val inFlight = ConcurrentHashMap.newKeySet<String>()
 
     private val TRIGGERS = listOf(
-        Regex("(?i)\\b(internet|online|google|web|net)\\b.*\\b(dekh|dhundho|dhund|pata|pata karo|laga|search|check|khojo)\\b"),
-        Regex("(?i)\\b(search|dekh|dhundho|dhund|pata karo|pata laga|google karo|khojo|check karo)\\b"),
-        Regex("(?i)\\b(kya hota hai|kya hai|kya hua|kya chal raha hai|kya scene hai|kya khabar)\\b"),
+        // Explicit internet/search requests only — avoids auto-triggering on
+        // normal chat ("kya hai", "kaise ho" etc).
+        Regex("(?i)\\b(internet|online|google|web|net)\\b"),
+        Regex("(?i)\\b(search|dhundho|dhund|pata karo|pata laga|khojo|check karo|google karo)\\b"),
         Regex("(?i)\\b(news|weather|temperature|price|prices|score|match|live score|stock|currency)\\b"),
-        Regex("(?i)\\bwhat is\\b|\\bwhat are\\b|\\bhow to\\b|\\bwhy is\\b|\\bwhat happened\\b")
+        Regex("(?i)\\bwhat is\\b|\\bwhat are\\b|\\bhow to\\b|\\bwhy is\\b|\\bwhat happened\\b"),
+        Regex("(?i)\\bdekh\\s+(kya|kaise|kaun)\\b|\\bdekh\\s+.*\\b(kya hota hai|kya chal raha hai|kya khabar)\\b")
     )
 
     private val FILLERS = listOf(

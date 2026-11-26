@@ -60,6 +60,8 @@ class AudioPlayer {
             // Moderate volume reduces speaker->mic leakage to the assistant.
             track.setVolume(0.85f)
             track.play()
+            var playedChunks = 0
+            Log.d("AeroAudio", "player started (call=$callMode route=$routeRev)")
             while (running.get()) {
                 // Rebuild the track when the audio mode or the speaker routing
                 // changes (routing only applies to a freshly created track).
@@ -84,6 +86,10 @@ class AudioPlayer {
                 }
                 val chunk = queue.poll(200, TimeUnit.MILLISECONDS) ?: continue
                 track.write(chunk, 0, chunk.size)
+                playedChunks++
+                if (playedChunks % 20 == 1) {
+                    Log.d("AeroAudio", "played $playedChunks chunks")
+                }
             }
             try {
                 track.stop()

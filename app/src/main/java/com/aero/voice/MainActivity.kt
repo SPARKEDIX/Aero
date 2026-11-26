@@ -576,11 +576,6 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                 }
 
                 if (!AeroState.micMuted) client?.sendAudio(chunk)
-                val p = player
-                if (p != null && now - lastFlushAt > 400) {
-                    lastFlushAt = now
-                    p.flush()
-                }
             }.also { it.start() }
         }
     }
