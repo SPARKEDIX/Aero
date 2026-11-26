@@ -793,32 +793,6 @@ class GeminiLiveClient(
             }))
         })
 
-        arr.put(JSONObject().apply {
-            put("functionDeclarations", JSONArray().put(JSONObject().apply {
-                put("name", "radio_control")
-                put(
-                    "description",
-                    "Control the in-app internet radio: play (by tag like bollywood, " +
-                        "hindi, desi), stop, or next station. Use when the user says " +
-                        "'radio chalao', 'bollywood radio on', 'radio band karo', 'next station'."
-                )
-                put("parameters", JSONObject().apply {
-                    put("type", "OBJECT")
-                    put("properties", JSONObject().apply {
-                        put("action", JSONObject().apply {
-                            put("type", "STRING")
-                            put("description", "play | stop | next")
-                        })
-                        put("query", JSONObject().apply {
-                            put("type", "STRING")
-                            put("description", "Only for play: station tag, e.g. 'bollywood' or 'hindi'.")
-                        })
-                    })
-                    put("required", JSONArray().put("action"))
-                })
-            }))
-        })
-
         return arr
     }
     fun sendToolResponses(responses: List<ToolResponse>) {

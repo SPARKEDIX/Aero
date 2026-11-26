@@ -254,8 +254,7 @@ class BackgroundSessionService : Service() {
                             }
                             "remember_fact", "forget_fact", "recall_memory",
                             "set_reminder", "call_me", "get_current_time",
-                            "manage_reminders", "youtube_control", "screen_lock",
-                            "radio_control" -> {
+                            "manage_reminders", "youtube_control", "screen_lock" -> {
                                 AeroTools.handle(this@BackgroundSessionService, call)
                                     ?: ToolResponse(
                                         call.id, call.name,

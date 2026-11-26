@@ -148,21 +148,6 @@ object AeroTools {
             ToolResponse(call.id, call.name, JSONObject().put("status", status))
         }
 
-        "radio_control" -> {
-            val action = call.args.optString("action").trim().lowercase()
-            val query = call.args.optString("query").trim()
-            val status = when (action) {
-                "play" -> RadioPlayer.play(ctx, query)
-                "stop" -> {
-                    RadioPlayer.stop()
-                    "Radio band kar diya."
-                }
-                "next" -> RadioPlayer.next(ctx)
-                else -> "Unknown radio action: $action"
-            }
-            ToolResponse(call.id, call.name, JSONObject().put("status", status))
-        }
-
         else -> null
     }
 }

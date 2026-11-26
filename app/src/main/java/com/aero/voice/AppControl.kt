@@ -154,9 +154,6 @@ object AppControl {
         data class YoutubeSpeed(val label: String) : Command()
         object LockPhone : Command()
         object UnlockPhone : Command()
-        data class RadioPlay(val query: String) : Command()
-        object RadioStop : Command()
-        object RadioNext : Command()
     }
 
     private val openRe = Regex(
@@ -386,28 +383,6 @@ object AppControl {
             return Command.UnlockPhone
         }
 
-        // ---- Radio (in-app internet radio) ----
-        // "radio chalao" / "bollywood radio on" / "fm chalao"
-        if (Regex("(?i)\\b(radio|fm|station)\\b.*\\b(chalao|chala|play|on|shuru|start)\\b").containsMatchIn(t) ||
-            Regex("(?i)\\b(chalao|chala|play|shuru|start|on)\\b.*\\b(radio|fm|station)\\b").containsMatchIn(t)
-        ) {
-            val target = t.replace(Regex("(?i)\\b(radio|fm|station|chalao|chala|play|on|shuru|start|karo|kar|karna)\\b"), " ")
-                .replace(Regex("\\s+"), " ").trim().trim(' ', ',', '.', '?', '!')
-            return Command.RadioPlay(target)
-        }
-        // "radio band karo" / "music stop"
-        if (Regex("(?i)\\b(radio|fm|music|gaana|gaane|song)\\b.*\\b(band|stop|bujhao|khatam)\\b").containsMatchIn(t) ||
-            Regex("(?i)\\b(band|stop|bujhao|khatam)\\b.*\\b(radio|fm|music|gaana|gaane|song)\\b").containsMatchIn(t)
-        ) {
-            return Command.RadioStop
-        }
-        // "radio next" / "agle gaana"
-        if (Regex("(?i)\\b(radio|fm|music|gaana|gaane)\\b.*\\b(next|agle|agla|doosra)\\b").containsMatchIn(t) ||
-            Regex("(?i)\\b(next|agle|agla|doosra)\\b.*\\b(radio|fm|music|gaana|gaane)\\b").containsMatchIn(t)
-        ) {
-            return Command.RadioNext
-        }
-
         // Memory: "yaad rakho mera naam Kartik hai" / "remember that ..."
         val remember = Regex(
             "(?i)\\b(yaad rakho|yaad rakhna|yaad rakh|remember that|remember|note karo|note kar)\\b(.*)"
@@ -628,11 +603,5 @@ object AppControl {
         }
         is Command.LockPhone -> ScreenControl.lock(ctx)
         is Command.UnlockPhone -> ScreenControl.unlock(ctx)
-        is Command.RadioPlay -> RadioPlayer.play(ctx, command.query)
-        is Command.RadioStop -> {
-            RadioPlayer.stop()
-            "Radio band kar diya."
-        }
-        is Command.RadioNext -> RadioPlayer.next(ctx)
     }
 }
