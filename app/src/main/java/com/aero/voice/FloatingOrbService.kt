@@ -32,6 +32,8 @@ class FloatingOrbService : Service() {
     private lateinit var params: WindowManager.LayoutParams
     private var expanded = false
 
+    private var cameraOverlay: OverlayCameraWindow? = null
+
     private var startX = 0
     private var startY = 0
     private var initialX = 0
@@ -137,11 +139,13 @@ class FloatingOrbService : Service() {
         overlayOrb.setMood(Prefs.mood(this))
 
         root.findViewById<ImageButton>(R.id.overlayCamera).setOnClickListener {
-            val intent = Intent(this, MainActivity::class.java).apply {
-                action = ACTION_OPEN_CAMERA
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            // Open a small camera overlay window right here on screen (front/back
+            // switch inside) — never opens the main app.
+            if (cameraOverlay == null) {
+                cameraOverlay = OverlayCameraWindow(this).also { it.show() }
+            } else {
+                cameraOverlay?.toggleFlip()
             }
-            startActivity(intent)
         }
 
         root.findViewById<ImageButton>(R.id.overlayScreenToggle).setOnClickListener {
@@ -291,6 +295,8 @@ class FloatingOrbService : Service() {
 
     override fun onDestroy() {
         handler.removeCallbacks(boostPump)
+        cameraOverlay?.dismiss()
+        cameraOverlay = null
         // Projection is owned by ScreenShareService; only remove the overlay here.
         if (::root.isInitialized) {
             try {
