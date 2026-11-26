@@ -33,6 +33,8 @@ class BackgroundSessionService : Service() {
     private var player: AudioPlayer? = null
     private var micOpen = false
     private var lastBargeInAt = 0L
+    private var loudFrames = 0
+    private var quietFrames = 0
     private var started = false
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -115,12 +117,15 @@ class BackgroundSessionService : Service() {
                 override fun onAssistantText(text: String) {}
                 override fun onAudio(bytes: ByteArray) {
                     micOpen = false
-                    AeroState.aiBoost = 0.5f + 0.5f * (rms(bytes) / 0.06f).coerceIn(0f, 1f)
+                    AeroState.aiSpeaking = true
+                    AeroState.aiBoost = 0.55f + 0.45f * (rms(bytes) / 0.06f).coerceIn(0f, 1f)
                     player?.enqueue(bytes)
                 }
                 override fun onTurnComplete() {
                     handler.post {
                         micOpen = true
+                        AeroState.aiSpeaking = false
+                        AeroState.aiBoost = 0f
                         AeroState.micBoost = 0f
                     }
                 }
@@ -336,12 +341,20 @@ class BackgroundSessionService : Service() {
                                     val energy = rms(chunk)
                                     AeroState.micBoost = (energy / 0.12f).coerceIn(0f, 1f)
                                     if (!micOpen) {
-                                        if (now - lastBargeInAt > 600 && energy > 0.04f) {
+                                        if (energy > 0.055f) loudFrames++ else loudFrames = 0
+                                        if (loudFrames >= 2 && now - lastBargeInAt > 400) {
                                             lastBargeInAt = now
                                             micOpen = true
+                                            loudFrames = 0
                                             player?.flush()
                                         }
                                         if (!micOpen) return@AudioRecorder
+                                    } else {
+                                        if (energy < 0.012f) quietFrames++ else quietFrames = 0
+                                        if (quietFrames > 30) {
+                                            micOpen = false
+                                            quietFrames = 0
+                                        }
                                     }
                                     if (!AeroState.micMuted) client?.sendAudio(chunk)
                                     player?.flush()

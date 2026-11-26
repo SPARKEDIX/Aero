@@ -213,7 +213,13 @@ class FloatingOrbService : Service() {
         override fun run() {
             val orb = root.findViewById<OrbView>(R.id.overlayOrb)
             orb.micBoost = AeroState.micBoost
-            orb.aiBoost = AeroState.aiBoost
+            // While the assistant is speaking, keep the ball vibrating for the
+            // whole turn (floor 0.55) even between audio frames/sentences.
+            orb.aiBoost = if (AeroState.aiSpeaking) {
+                maxOf(0.55f, AeroState.aiBoost)
+            } else {
+                AeroState.aiBoost
+            }
             handler.postDelayed(this, 80L)
         }
     }

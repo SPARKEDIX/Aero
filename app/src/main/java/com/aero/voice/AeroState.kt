@@ -22,6 +22,10 @@ object AeroState {
     @Volatile
     var audioRoute = 0
 
+    /** True while the assistant is actively speaking (turn in progress). */
+    @Volatile
+    var aiSpeaking = false
+
     /** Set while a voice session runs, so the floating service can send frames. */
     @Volatile
     var liveClient: GeminiLiveClient? = null

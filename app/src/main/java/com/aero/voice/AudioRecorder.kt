@@ -52,6 +52,23 @@ class AudioRecorder(private val onChunk: (ByteArray) -> Unit) {
 
             recorder.startRecording()
             Log.d(TAG, "recording started (state=${recorder.recordingState})")
+
+            // Real noise cancellation + auto gain control (hardware/DSP).
+            // Removes fan/cough/background hum before chunks are sent, so the
+            // model isn't triggered by ambient noise.
+            try {
+                val ns = android.media.audiofx.NoiseSuppressor.create(recorder.audioSessionId)
+                ns?.enabled = true
+                Log.d(TAG, "noise suppressor enabled=${ns?.enabled}")
+            } catch (_: Throwable) {
+            }
+            try {
+                val agc = android.media.audiofx.AutomaticGainControl.create(recorder.audioSessionId)
+                agc?.enabled = true
+                Log.d(TAG, "agc enabled=${agc?.enabled}")
+            } catch (_: Throwable) {
+            }
+
             val buf = ByteArray(1600) // 100 ms at 16 kHz
             var chunks = 0
             while (running.get()) {

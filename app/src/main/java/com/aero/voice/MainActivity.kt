@@ -47,6 +47,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import java.util.ArrayDeque
 
@@ -84,6 +85,8 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     private var lastFlushAt = 0L
     private var lastBargeInAt = 0L
     private var micOpen = true
+    private var loudFrames = 0
+    private var quietFrames = 0
 
     // ---- Internet access (background searches + queued tool responses) ----
     private val searchScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -92,6 +95,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     // Only touched on the main thread (handler), so a plain HashMap is safe.
     private val toolJobs = HashMap<String, Job>()
     private var lastDequeuedAt = 0L
+    private var pendingStartedAt = 0L
 
     private data class PendingBatch(val responses: List<ToolResponse>)
 
@@ -549,16 +553,26 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
                 // While the assistant is speaking, our mic feed is closed to
                 // prevent self-echo — but we still watch for the USER's voice.
-                // If real speech is detected, we barge in: flush playback and
-                // reopen the mic stream so the server hears the interruption.
+                // Only REAL speech (2 consecutive loud frames) reopens the mic —
+                // a single cough / chair-squeak won't interrupt the assistant.
                 if (!micOpen) {
-                    if (now - lastBargeInAt > 600 && energy > 0.04f) {
+                    if (energy > 0.055f) loudFrames++ else loudFrames = 0
+                    if (loudFrames >= 2 && now - lastBargeInAt > 400) {
                         lastBargeInAt = now
                         micOpen = true
+                        loudFrames = 0
                         player?.flush()
                         android.util.Log.d("BargeIn", "user speech detected during assistant turn")
                     }
                     if (!micOpen) return@AudioRecorder
+                } else {
+                    // Auto-close the mic after ~3s of silence so ambient noise
+                    // doesn't leak into the next assistant turn.
+                    if (energy < 0.012f) quietFrames++ else quietFrames = 0
+                    if (quietFrames > 30) {
+                        micOpen = false
+                        quietFrames = 0
+                    }
                 }
 
                 if (!AeroState.micMuted) client?.sendAudio(chunk)
@@ -608,10 +622,13 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         lastAssistantAudioAt = SystemClock.elapsedRealtime()
         micOpen = false
         // Vibrate the orb with the assistant's own voice + speed up its smoke.
-        // A floor guarantees a clearly visible vibration even in quiet passages.
+        // A floor guarantees a clearly visible vibration even in quiet passages,
+        // and aiSpeaking keeps the ball vibrating for the WHOLE turn (even
+        // between sentences), not just while a loud frame arrives.
         val level = (rms(bytes) / 0.06f).coerceIn(0f, 1f)
+        AeroState.aiSpeaking = true
         orbView.onAiAudio(level)
-        AeroState.aiBoost = 0.5f + 0.5f * level
+        AeroState.aiBoost = 0.55f + 0.45f * level
         player?.enqueue(bytes)
     }
 
@@ -619,6 +636,8 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         handler.post {
             micOpen = true
             orbView.micBoost = 0f
+            AeroState.aiSpeaking = false
+            AeroState.aiBoost = 0f
             orbView.onAiTurnEnd()
         }
     }
@@ -640,9 +659,13 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                                 JSONObject().put("error", "empty search query")
                             } else {
                                 try {
-                                    searchOrchestrator.search(query).toJson()
+                                    // Hard timeout so a slow/hanging source never
+                                    // leaves the model waiting forever.
+                                    withTimeout(10_000L) {
+                                        searchOrchestrator.search(query).toJson()
+                                    }
                                 } catch (t: Throwable) {
-                                    JSONObject().put("error", t.message ?: "search failed")
+                                    JSONObject().put("error", "search timed out or failed: ${t.message}")
                                 }
                             }
                             ToolResponse(call.id, call.name, result)
@@ -791,6 +814,9 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
             withContext(Dispatchers.Main) {
                 if (sessionActive) {
                     pendingResponses.addLast(PendingBatch(responses))
+                    if (pendingResponses.size == 1) {
+                        pendingStartedAt = SystemClock.elapsedRealtime()
+                    }
                     Log.d(
                         "Search",
                         "queued ${responses.size} tool response(s), pending=${pendingResponses.size}"
@@ -837,15 +863,22 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     private fun drainQueue() {
         if (pendingResponses.isEmpty()) return
         val now = SystemClock.elapsedRealtime()
-        if (now - lastAssistantAudioAt < SPEECH_GAP_MS) return
-        if (now - lastDequeuedAt < SPEECH_GAP_MS) return
+
+        // Hard safety: if a tool response has been waiting more than 8s,
+        // send it regardless of speech gaps (never lose it silently).
+        val force = pendingStartedAt > 0 && now - pendingStartedAt > 8_000L
+        if (!force) {
+            if (now - lastAssistantAudioAt < SPEECH_GAP_MS) return
+            if (now - lastDequeuedAt < SPEECH_GAP_MS) return
+        }
 
         val batch = pendingResponses.removeFirst()
         lastDequeuedAt = now
+        pendingStartedAt = if (pendingResponses.isEmpty()) 0L else now
         Log.d(
             "Search",
             "sending ${batch.responses.size} tool response(s) after " +
-                "${now - lastAssistantAudioAt} ms of silence"
+                "${now - lastAssistantAudioAt} ms of silence (force=$force)"
         )
         client?.sendToolResponses(batch.responses)
     }

@@ -18,6 +18,16 @@ class AssistantProxyActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "assistant invoked — starting background session")
+
+        // If the main app UI is already visible (user is inside Aero),
+        // ignore the assistant invoke — no duplicate ball/session over the app.
+        if (AeroApp.mainVisible) {
+            Log.d(TAG, "app already visible — ignoring assistant invoke")
+            AeroState.markProxyWake()
+            finish()
+            return
+        }
+
         AeroState.markProxyWake()
 
         // Start (or resume) the invisible voice session and show the orb.
