@@ -611,6 +611,10 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                 val spoken = AppControl.run(this, cmd)
                 client?.sendContextText("[Action performed] $spoken")
             }
+        } else {
+            // Internet-style request → non-blocking background query. The model
+            // keeps talking; results are injected when ready.
+            BackgroundQuery.maybeStart(text)
         }
     }
 

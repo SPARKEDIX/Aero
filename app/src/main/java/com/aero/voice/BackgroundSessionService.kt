@@ -112,6 +112,8 @@ class BackgroundSessionService : Service() {
                         val spoken = AppControl.run(this@BackgroundSessionService, cmd)
                         // Let the model narrate the result.
                         client?.sendContextText("[Action performed] $spoken")
+                    } else {
+                        BackgroundQuery.maybeStart(text)
                     }
                 }
                 override fun onAssistantText(text: String) {}
