@@ -682,11 +682,14 @@ object AppControl {
         }
         is Command.DeviceStatus -> DeviceHealth.summary(ctx)
         is Command.LookScreen -> {
-            val ok = ScreenShareHelper.ensureScreenShare(ctx)
-            if (ok) {
-                "Screen dekh raha hoon. System consent dialog aaye to Allow karo."
+            // Instant answer from UI text — never auto-starts screen projection.
+            val dump = AeroAccessibilityService.dumpNow()
+            val text = dump.ifBlank { "(screen par readable text nahi mila)" }
+            AeroState.liveClient?.sendContextText("Current screen text: $text")
+            if (MediaProjectionHolder.isRunning) {
+                "Screen dekh raha hoon (feed active): $text"
             } else {
-                "Screen share start nahi ho paya. Settings se permission check karo."
+                "Screen par abhi: $text"
             }
         }
         is Command.AgentTask -> ScreenAgent.start(ctx, command.goal)

@@ -494,5 +494,20 @@ class AeroAccessibilityService : AccessibilityService() {
         /** Package name of the current top window (or null). */
         fun currentPackage(): String? =
             liveService?.rootInActiveWindow?.packageName?.toString()
+
+        /** Blocking screen-text dump (small timeout). */
+        fun dumpNow(timeoutMs: Long = 1500L): String {
+            val latch = java.util.concurrent.CountDownLatch(1)
+            val holder = arrayOfNulls<String>(1)
+            requestDump { dump ->
+                holder[0] = dump
+                latch.countDown()
+            }
+            return if (latch.await(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                holder[0] ?: ""
+            } else {
+                ""
+            }
+        }
     }
 }

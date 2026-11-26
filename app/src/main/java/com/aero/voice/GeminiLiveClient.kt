@@ -841,14 +841,21 @@ class GeminiLiveClient(
                 put("name", "look_at_screen")
                 put(
                     "description",
-                    "Look at the user's screen (starts screen capture automatically if " +
-                        "needed, system consent dialog may appear). Use when the user " +
-                        "asks 'screen dekh', 'screen par kya hai', or you need to see " +
-                        "the current screen to perform a task."
+                    "Describe what is currently visible. source=\"screen\" reads the " +
+                        "current screen via UI text (use when the user asks 'screen par " +
+                        "kya hai', 'ye kya dikh rha hai'). source=\"camera\" means the " +
+                        "user is showing something through the camera feed — answer from " +
+                        "the camera video frames you already receive; never ask to enable " +
+                        "screen share for camera questions."
                 )
                 put("parameters", JSONObject().apply {
                     put("type", "OBJECT")
-                    put("properties", JSONObject())
+                    put("properties", JSONObject().apply {
+                        put("source", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "screen | camera (default screen)")
+                        })
+                    })
                     put("required", JSONArray())
                 })
             }))

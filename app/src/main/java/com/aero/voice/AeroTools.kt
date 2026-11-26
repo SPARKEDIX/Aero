@@ -198,17 +198,26 @@ object AeroTools {
         )
 
         "look_at_screen" -> {
-            val ok = ScreenShareHelper.ensureScreenShare(ctx)
-            // Instant accessibility UI dump — lets the model answer "what's on
-            // screen" right now even before the video feed warms up.
-            val dump = uiDumpNow(ctx)
-            val status = if (ok) {
-                "Screen share shuru ho raha hai (system consent dialog aaye to Allow karo). " +
-                    "Screen text abhi: " + dump
+            val source = call.args.optString("source").trim().lowercase()
+            if (source == "camera") {
+                ToolResponse(
+                    call.id, call.name,
+                    JSONObject().put(
+                        "status",
+                        "Camera feed active — describe what you see in the latest " +
+                            "camera video frame. Do not mention screen share."
+                    )
+                )
             } else {
-                "Screen share start nahi ho paya. Screen text: " + dump
+                val dump = uiDumpNow(ctx)
+                ToolResponse(
+                    call.id, call.name,
+                    JSONObject().put(
+                        "status",
+                        "Current screen text: " + dump.ifBlank { "(no readable text)" }
+                    )
+                )
             }
-            ToolResponse(call.id, call.name, JSONObject().put("status", status))
         }
 
         "agent_run" -> {
