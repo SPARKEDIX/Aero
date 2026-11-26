@@ -88,6 +88,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     private var loudFrames = 0
     private var quietFrames = 0
     private var aiAudioChunks = 0
+    private var mainChunks = 0
 
     // ---- Internet access (background searches + queued tool responses) ----
     private val searchScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -558,7 +559,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                 // Only REAL speech (2 consecutive loud frames) reopens the mic —
                 // a single cough / chair-squeak won't interrupt the assistant.
                 if (!micOpen) {
-                    if (energy > 0.055f) loudFrames++ else loudFrames = 0
+                    if (energy > 0.04f) loudFrames++ else loudFrames = 0
                     if (loudFrames >= 2 && now - lastBargeInAt > 400) {
                         lastBargeInAt = now
                         micOpen = true
@@ -566,7 +567,13 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                         player?.flush()
                         android.util.Log.d("BargeIn", "user speech detected during assistant turn")
                     }
-                    if (!micOpen) return@AudioRecorder
+                    if (!micOpen) {
+                        mainChunks++
+                        if (mainChunks % 20 == 1) {
+                            Log.d("AeroMic", "main: gate closed, dropping chunk e=${"%.3f".format(energy)}")
+                        }
+                        return@AudioRecorder
+                    }
                 } else {
                     // Auto-close the mic after ~3s of silence so ambient noise
                     // doesn't leak into the next assistant turn.
@@ -578,6 +585,13 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                 }
 
                 if (!AeroState.micMuted) client?.sendAudio(chunk)
+                mainChunks++
+                if (mainChunks % 20 == 1) {
+                    Log.d(
+                        "AeroMic",
+                        "main: sent chunk e=${"%.3f".format(energy)} micOpen=$micOpen muted=${AeroState.micMuted} client=${client != null}"
+                    )
+                }
             }.also { it.start() }
         }
     }
