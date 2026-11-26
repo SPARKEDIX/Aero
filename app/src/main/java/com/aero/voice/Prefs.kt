@@ -12,6 +12,9 @@ object Prefs {
     private const val KEY_MOOD = "mood"
     private const val KEY_HOTWORD = "hotword_enabled"
     private const val KEY_WAKE_PHRASE = "wake_phrase"
+    private const val KEY_ONBOARDED = "onboarded"
+    private const val KEY_NAME = "user_name"
+    private const val KEY_HOBBIES = "user_hobbies"
 
     const val THEME_LIGHT = "light"
     const val THEME_DARK = "dark"
@@ -80,6 +83,36 @@ object Prefs {
         ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
             .putString(KEY_API, apiKey)
             .putString(KEY_VOICE, voice)
+            .apply()
+    }
+
+    fun onboarded(ctx: Context): Boolean =
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getBoolean(KEY_ONBOARDED, false)
+
+    fun setOnboarded(ctx: Context, value: Boolean) {
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_ONBOARDED, value)
+            .apply()
+    }
+
+    fun userName(ctx: Context): String =
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getString(KEY_NAME, "") ?: ""
+
+    fun setUserName(ctx: Context, name: String) {
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
+            .putString(KEY_NAME, name.trim())
+            .apply()
+    }
+
+    fun userHobbies(ctx: Context): String =
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getString(KEY_HOBBIES, "") ?: ""
+
+    fun setUserHobbies(ctx: Context, hobbies: String) {
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
+            .putString(KEY_HOBBIES, hobbies.trim())
             .apply()
     }
 }
