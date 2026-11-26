@@ -20,9 +20,19 @@ object DeviceHealth {
     fun battery(ctx: Context): BatteryInfo {
         val bm = ctx.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
         val level = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-        val charging = bm.isCharging
-        val temp = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_TEMPERATURE) / 10f
-        return BatteryInfo(level.coerceIn(0, 100), charging, temp)
+        var charging = bm.isCharging
+        var tempC = 0f
+        try {
+            val intent = ctx.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
+            if (intent != null) {
+                val status = intent.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1)
+                charging = status == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
+                    status == android.os.BatteryManager.BATTERY_STATUS_FULL
+                tempC = intent.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0) / 10f
+            }
+        } catch (_: Throwable) {
+        }
+        return BatteryInfo(level.coerceIn(0, 100), charging, tempC)
     }
 
     fun storage(): Pair<Long, Long> { // (total, free) bytes of internal storage
