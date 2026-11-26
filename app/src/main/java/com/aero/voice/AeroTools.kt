@@ -192,6 +192,11 @@ object AeroTools {
             )
         }
 
+        "agent_run" -> {
+            val goal = call.args.optString("goal").trim()
+            ToolResponse(call.id, call.name, JSONObject().put("status", ScreenAgent.start(ctx, goal)))
+        }
+
         else -> null
     }
 }

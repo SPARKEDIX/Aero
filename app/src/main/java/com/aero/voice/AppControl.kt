@@ -161,6 +161,7 @@ object AppControl {
         object BatteryStatus : Command()
         object DeviceStatus : Command()
         object LookScreen : Command()
+        data class AgentTask(val goal: String) : Command()
     }
 
     private val openRe = Regex(
@@ -429,6 +430,13 @@ object AppControl {
             return Command.LookScreen
         }
 
+        // ---- Autonomous agent ----
+        val agent = Regex("(?i)\\b(agent|autopilot|aik chalao|task karo|kaam kar do|khud kar|screen task)\\b(.*)").find(t)
+        if (agent != null) {
+            val goal = agent.groupValues[1].trim().trimStart(':', '-', ' ', '—')
+            if (goal.isNotEmpty()) return Command.AgentTask(goal)
+        }
+
         // Memory: "yaad rakho mera naam Kartik hai" / "remember that ..."
         val remember = Regex(
             "(?i)\\b(yaad rakho|yaad rakhna|yaad rakh|remember that|remember|note karo|note kar)\\b(.*)"
@@ -680,5 +688,6 @@ object AppControl {
                 "Screen share start nahi ho paya. Settings se permission check karo."
             }
         }
+        is Command.AgentTask -> ScreenAgent.start(ctx, command.goal)
     }
 }

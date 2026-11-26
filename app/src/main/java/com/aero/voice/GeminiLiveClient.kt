@@ -854,6 +854,29 @@ class GeminiLiveClient(
             }))
         })
 
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "agent_run")
+                put(
+                    "description",
+                    "Run the autonomous screen agent: Aero looks at the screen, plans " +
+                        "steps and executes taps/types/navigation by itself until the " +
+                        "goal is done. Use when the user says 'agent chalao', 'task " +
+                        "karo', 'kaam kar do <goal>', 'khud kar'."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("goal", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "The user's goal, e.g. 'Instagram kholo aur reels search karo'.")
+                        })
+                    })
+                    put("required", JSONArray().put("goal"))
+                })
+            }))
+        })
+
         return arr
     }
     fun sendToolResponses(responses: List<ToolResponse>) {
