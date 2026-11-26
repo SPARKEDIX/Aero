@@ -117,17 +117,15 @@ class OnboardingActivity : AppCompatActivity() {
 
         Thread {
             val ok = try {
-                val url = "https://generativelanguage.googleapis.com/v1beta/models/" +
-                    URLEncoder.encode(Prefs.modelId(this), "UTF-8") +
-                    ":generateContent?key=" + URLEncoder.encode(key, "UTF-8")
-                val payload = """{"contents":[{"parts":[{"text":"ping"}]}]}"""
-                val req = Request.Builder()
-                    .url(url)
-                    .post(payload.toRequestBody(JSON))
-                    .build()
+                // List-models endpoint: works with ANY valid key, independent of
+                // which model ID the user has saved. A valid key returns 200
+                // with a "models" array; an invalid key returns 400/403.
+                val url = "https://generativelanguage.googleapis.com/v1beta/models?key=" +
+                    URLEncoder.encode(key, "UTF-8")
+                val req = Request.Builder().url(url).build()
                 http.newCall(req).execute().use { resp ->
                     val body = resp.body?.string() ?: ""
-                    resp.isSuccessful && body.contains("candidates")
+                    resp.isSuccessful && body.contains("\"models\"")
                 }
             } catch (_: Exception) {
                 false
