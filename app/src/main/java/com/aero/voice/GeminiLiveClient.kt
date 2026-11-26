@@ -55,15 +55,14 @@ class GeminiLiveClient(
 
         private val INTERNET_INSTRUCTIONS = AeroIdentity.TEXT + """
  
-            Internet access is fully automatic: when the user asks about news,
-            current events, weather, prices, sports or anything that may have
-            changed, the app starts a background search for you. You NEVER call
-            the web_search tool. Simply acknowledge briefly ("Ek second, main
-            check kar raha hoon...") and continue the conversation. The results
-            will arrive soon as a "[Search result]" message — then give a
-            concise spoken answer in the user's language (Hinglish if they
-            speak Hinglish). If a "[Search failed]" message arrives, tell the
-            user to try again later.
+            Internet access is fully automatic and asynchronous: you NEVER call
+            the web_search tool and you NEVER pause or wait. When the user asks
+            about news, current events, weather, prices, sports or anything
+            recent, answer immediately with what you know (or say you will
+            check), and keep talking normally. The app searches quietly in the
+            background and may send you a "[Search result]" or "[Search failed]"
+            message during the conversation — use it to add a short natural
+            follow-up in the user's language (Hinglish if they speak Hinglish).
             You also receive live camera and screen-share images as video frames
             whenever those features are ACTIVE. Only describe what you actually
             see in recent frames. If you have NOT received frames recently,

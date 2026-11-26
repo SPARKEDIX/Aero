@@ -69,13 +69,10 @@ object BackgroundQuery {
             return // already running
         }
 
-        val client = AeroState.liveClient
-        if (client != null) {
-            client.sendContextText(
-                "[System] User ne internet par poocha hai. Main background mein search shuru kar raha hoon: \"$query\". " +
-                    "Tu normal baat karta reh — result milte hi main bata dunga."
-            )
-        }
+        // NOTE: intentionally NO notification to the model here. Telling the
+        // model "search started" makes it pause and wait — the exact bug the
+        // user reported. The search just runs silently; only the finished
+        // result is injected later as a natural follow-up.
         Log.d(TAG, "background search started: $query")
 
         scope.launch {
@@ -86,7 +83,7 @@ object BackgroundQuery {
                     inFlight.remove(query.lowercase())
                     val live = AeroState.liveClient
                     if (live != null) {
-                        live.sendContextText("[Search result for \"$query\"] $summary")
+                        live.sendContextText("[Search result] $summary")
                         Log.d(TAG, "search result injected: ${summary.take(120)}")
                     }
                 }
@@ -97,8 +94,8 @@ object BackgroundQuery {
                     val live = AeroState.liveClient
                     if (live != null) {
                         live.sendContextText(
-                            "[Search failed for \"$query\"] Internet sources tak nahi pahunch paya. " +
-                                "User ko batao ki thodi der baad try kare."
+                            "[Search failed] Internet sources tak nahi pahunch paya. " +
+                                "Thodi der baad try karna."
                         )
                     }
                 }
