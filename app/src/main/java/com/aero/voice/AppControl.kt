@@ -158,6 +158,9 @@ object AppControl {
         object AutoReplyOff : Command()
         data class AutoReplyAdd(val name: String) : Command()
         data class AutoReplyRemove(val name: String) : Command()
+        object BatteryStatus : Command()
+        object DeviceStatus : Command()
+        object LookScreen : Command()
     }
 
     private val openRe = Regex(
@@ -409,6 +412,23 @@ object AppControl {
             if (name.isNotEmpty()) return Command.AutoReplyRemove(name)
         }
 
+        // ---- Device health / status ----
+        if (Regex("(?i)\\b(battery|battery status|battery kitni|charge)\\b").containsMatchIn(t)) {
+            return Command.BatteryStatus
+        }
+        if (Regex("(?i)\\b(device status|device health|phone details|health check|device info|phone status)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(status|health)\\b.*\\b(phone|device|mobile)\\b").containsMatchIn(t)
+        ) {
+            return Command.DeviceStatus
+        }
+
+        // ---- Self screen vision ----
+        if (Regex("(?i)\\b(screen dekh|screen dekho|dekh screen|look at screen|screen kya dikh raha|screen dekho)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(dekh|dekho)\\b.*\\b(screen|screen par)\\b").containsMatchIn(t)
+        ) {
+            return Command.LookScreen
+        }
+
         // Memory: "yaad rakho mera naam Kartik hai" / "remember that ..."
         val remember = Regex(
             "(?i)\\b(yaad rakho|yaad rakhna|yaad rakh|remember that|remember|note karo|note kar)\\b(.*)"
@@ -646,6 +666,19 @@ object AppControl {
         is Command.AutoReplyRemove -> {
             WhatsAppAutoReply.removeTarget(ctx, command.name)
             "${command.name} auto-reply se hata diya."
+        }
+        is Command.BatteryStatus -> {
+            val b = DeviceHealth.battery(ctx)
+            "Battery ${b.level}%, ${if (b.charging) "charging" else "not charging"}, temperature ${b.tempC}°C."
+        }
+        is Command.DeviceStatus -> DeviceHealth.summary(ctx)
+        is Command.LookScreen -> {
+            val ok = ScreenShareHelper.ensureScreenShare(ctx)
+            if (ok) {
+                "Screen dekh raha hoon. System consent dialog aaye to Allow karo."
+            } else {
+                "Screen share start nahi ho paya. Settings se permission check karo."
+            }
         }
     }
 }

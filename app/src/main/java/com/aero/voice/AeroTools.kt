@@ -175,6 +175,23 @@ object AeroTools {
             ToolResponse(call.id, call.name, JSONObject().put("status", status))
         }
 
+        "device_status" -> ToolResponse(
+            call.id, call.name,
+            JSONObject().put("status", DeviceHealth.summary(ctx))
+        )
+
+        "look_at_screen" -> {
+            val ok = ScreenShareHelper.ensureScreenShare(ctx)
+            ToolResponse(
+                call.id, call.name,
+                JSONObject().put(
+                    "status",
+                    if (ok) "Screen share shuru ho raha hai (system consent dialog aaye to Allow karo)."
+                    else "Screen share start nahi ho paya."
+                )
+            )
+        }
+
         else -> null
     }
 }

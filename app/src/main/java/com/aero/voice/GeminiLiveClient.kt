@@ -819,6 +819,41 @@ class GeminiLiveClient(
             }))
         })
 
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "device_status")
+                put(
+                    "description",
+                    "Return device health: battery level/charging/temperature, storage " +
+                        "free, RAM free, uptime, device model. Use when the user asks " +
+                        "'battery batao', 'device status', 'health', 'storage'."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject())
+                    put("required", JSONArray())
+                })
+            }))
+        })
+
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "look_at_screen")
+                put(
+                    "description",
+                    "Look at the user's screen (starts screen capture automatically if " +
+                        "needed, system consent dialog may appear). Use when the user " +
+                        "asks 'screen dekh', 'screen par kya hai', or you need to see " +
+                        "the current screen to perform a task."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject())
+                    put("required", JSONArray())
+                })
+            }))
+        })
+
         return arr
     }
     fun sendToolResponses(responses: List<ToolResponse>) {

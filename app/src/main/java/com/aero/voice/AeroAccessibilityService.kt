@@ -286,6 +286,48 @@ class AeroAccessibilityService : AccessibilityService() {
     /** Opens WhatsApp, opens the chat with [sender], types [reply], taps Send. */
     private fun performAutoReply(sender: String, reply: String) {
         if (sender.isBlank() || reply.isBlank()) return
+        // 1) Try the notification quick-reply path first (no full app UI).
+        quickReplyDone = false
+        performQuickReply(reply)
+        // 2) If quick-reply didn't complete, fall back to opening WhatsApp.
+        handler.postDelayed({
+            if (!quickReplyDone) performAppFlow(sender, reply)
+        }, 6500L)
+    }
+
+    private var quickReplyDone = false
+
+    /** Uses the notification's Reply action + inline reply box (system panel). */
+    private fun performQuickReply(reply: String) {
+        try {
+            performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
+        } catch (_: Throwable) {
+        }
+        handler.postDelayed({
+            if (!tryFindAndClick("Reply") && !tryFindAndClick("reply")) {
+                Log.d(TAG, "quick-reply: Reply action nahi mila")
+                return@postDelayed
+            }
+            handler.postDelayed({
+                performTypeText(reply)
+                handler.postDelayed({
+                    val ok = tryFindAndClick("Send") ||
+                        tryFindAndClick("send") ||
+                        tryFindAndClick("SEND")
+                    if (ok) quickReplyDone = true
+                    Log.d(TAG, "quick-reply send tapped=$ok")
+                    handler.postDelayed({
+                        try {
+                            performGlobalAction(GLOBAL_ACTION_HOME)
+                        } catch (_: Throwable) {
+                        }
+                    }, 400L)
+                }, 800L)
+            }, 800L)
+        }, 1000L)
+    }
+
+    private fun performAppFlow(sender: String, reply: String) {
         try {
             val app = AeroApp.instance ?: return
             val launch = app.packageManager.getLaunchIntentForPackage("com.whatsapp")
@@ -307,6 +349,12 @@ class AeroAccessibilityService : AccessibilityService() {
                         tryFindAndClick("Send") ||
                         tryFindAndClick("Send message")
                     Log.d(TAG, "auto-reply send tapped=$ok")
+                    handler.postDelayed({
+                        try {
+                            performGlobalAction(GLOBAL_ACTION_HOME)
+                        } catch (_: Throwable) {
+                        }
+                    }, 500L)
                 }, 700L)
             }, 900L)
         }, 1600L)
