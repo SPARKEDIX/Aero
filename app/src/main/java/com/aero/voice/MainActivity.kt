@@ -398,6 +398,10 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         AeroState.sessionActive = true
         AeroState.micMuted = false
         aiAudioChunks = 0
+
+        // One active voice session at a time: if the background (orb) session is
+        // running, stop it so only this app session owns the mic + live client.
+        BackgroundSessionService.stop(this)
         KeepAliveService.start(this)
         setMicActiveUI(true)
         handler.post(drainRunnable)
@@ -556,11 +560,10 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
 
                 // While the assistant is speaking, our mic feed is closed to
                 // prevent self-echo — but we still watch for the USER's voice.
-                // Only REAL speech (2 consecutive loud frames) reopens the mic —
-                // a single cough / chair-squeak won't interrupt the assistant.
+                // Reopen on a single clear speech frame (low threshold so soft
+                // voices are still heard).
                 if (!micOpen) {
-                    if (energy > 0.04f) loudFrames++ else loudFrames = 0
-                    if (loudFrames >= 2 && now - lastBargeInAt > 400) {
+                    if (energy > 0.02f) {
                         lastBargeInAt = now
                         micOpen = true
                         loudFrames = 0
@@ -575,10 +578,10 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                         return@AudioRecorder
                     }
                 } else {
-                    // Auto-close the mic after ~3s of silence so ambient noise
+                    // Auto-close the mic after ~5s of silence so ambient noise
                     // doesn't leak into the next assistant turn.
                     if (energy < 0.012f) quietFrames++ else quietFrames = 0
-                    if (quietFrames > 30) {
+                    if (quietFrames > 50) {
                         micOpen = false
                         quietFrames = 0
                     }
