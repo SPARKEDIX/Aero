@@ -9,6 +9,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.ImageButton
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -16,6 +17,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import java.util.concurrent.Executors
 
 /**
  * Small centered camera window — same CameraX tech as the in-app camera.
@@ -37,6 +39,8 @@ class OverlayCameraWindow(private val context: Context) {
     private var provider: ProcessCameraProvider? = null
     private var lensBack = true
     private var shown = false
+    private val analysisExecutor = Executors.newSingleThreadExecutor()
+    private var lastFrameSentAt = 0L
 
     fun show() {
         if (shown) return
@@ -88,7 +92,44 @@ class OverlayCameraWindow(private val context: Context) {
                     val useCase = Preview.Builder().build().also {
                         it.setSurfaceProvider(preview.surfaceProvider)
                     }
-                    cameraProvider.bindToLifecycle(owner, selector, useCase)
+                    // Analysis → JPEG → send to live AI (same as screen frames).
+                    val analysis = ImageAnalysis.Builder()
+                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                        .build()
+                    analysis.setAnalyzer(analysisExecutor) { imageProxy ->
+                        try {
+                            val now = System.currentTimeMillis()
+                            if (now - lastFrameSentAt >= 2000L) {
+                                val client = AeroState.liveClient
+                                if (client != null) {
+                                    val bmp = imageProxy.toBitmap()
+                                    val w = bmp.width
+                                    val h = bmp.height
+                                    val scale = 320.0 / maxOf(w, h)
+                                    val scaled = if (scale < 1.0) {
+                                        android.graphics.Bitmap.createScaledBitmap(
+                                            bmp,
+                                            (w * scale).toInt().coerceAtLeast(1),
+                                            (h * scale).toInt().coerceAtLeast(1),
+                                            true
+                                        )
+                                    } else {
+                                        bmp
+                                    }
+                                    val bos = java.io.ByteArrayOutputStream()
+                                    scaled.compress(android.graphics.Bitmap.CompressFormat.JPEG, 50, bos)
+                                    client.sendImage(bos.toByteArray())
+                                    lastFrameSentAt = now
+                                    if (scaled !== bmp) scaled.recycle()
+                                    bmp.recycle()
+                                }
+                            }
+                        } catch (_: Throwable) {
+                        } finally {
+                            imageProxy.close()
+                        }
+                    }
+                    cameraProvider.bindToLifecycle(owner, selector, useCase, analysis)
                 } catch (t: Throwable) {
                     Log.w(TAG, "camera bind failed", t)
                 }
@@ -107,6 +148,10 @@ class OverlayCameraWindow(private val context: Context) {
     fun dismiss() {
         if (!shown) return
         shown = false
+        try {
+            analysisExecutor.shutdownNow()
+        } catch (_: Throwable) {
+        }
         try {
             provider?.unbindAll()
         } catch (_: Throwable) {
