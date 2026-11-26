@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="300dp"
-    android:layout_height="400dp"
+    android:layout_width="312dp"
+    android:layout_height="416dp"
     android:background="@drawable/bg_rounded_rect_black">
 
     <androidx.camera.view.PreviewView
@@ -9,30 +9,14 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+    <ImageButton
+        android:id="@+id/camFlip"
+        android:layout_width="46dp"
+        android:layout_height="46dp"
         android:layout_gravity="top|end"
-        android:layout_margin="10dp"
-        android:orientation="vertical">
-
-        <ImageButton
-            android:id="@+id/camFlip"
-            android:layout_width="46dp"
-            android:layout_height="46dp"
-            android:background="@drawable/bg_call_button"
-            android:contentDescription="Switch camera"
-            android:padding="12dp"
-            android:src="@drawable/ic_flip" />
-
-        <ImageButton
-            android:id="@+id/camClose"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
-            android:layout_marginTop="10dp"
-            android:background="@drawable/bg_call_button"
-            android:contentDescription="Close camera"
-            android:padding="11dp"
-            android:src="@drawable/ic_close" />
-    </LinearLayout>
+        android:layout_margin="12dp"
+        android:background="@drawable/bg_call_button"
+        android:contentDescription="Switch camera"
+        android:padding="12dp"
+        android:src="@drawable/ic_flip" />
 </FrameLayout>

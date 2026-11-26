@@ -139,16 +139,19 @@ class FloatingOrbService : Service() {
         overlayOrb.setMood(Prefs.mood(this))
 
         root.findViewById<ImageButton>(R.id.overlayCamera).setOnClickListener {
-            // Open a small camera overlay window right here on screen (front/back
-            // switch inside) — never opens the main app.
+            ClickSound.play(this)
+            // Toggle the centered camera window (same button opens & closes).
             if (cameraOverlay == null) {
                 cameraOverlay = OverlayCameraWindow(this).also { it.show() }
             } else {
-                cameraOverlay?.toggleFlip()
+                cameraOverlay?.dismiss()
+                cameraOverlay = null
             }
+            updateOverlayCameraToggle()
         }
 
         root.findViewById<ImageButton>(R.id.overlayScreenToggle).setOnClickListener {
+            ClickSound.play(this)
             Log.d(TAG, "screen toggle clicked")
             if (MediaProjectionHolder.isRunning) {
                 // Share is ON → stop only the projection service. The floating
@@ -168,6 +171,7 @@ class FloatingOrbService : Service() {
         }
 
         mute.setOnClickListener {
+            ClickSound.play(this)
             AeroState.micMuted = !AeroState.micMuted
             mute.setImageResource(
                 if (AeroState.micMuted) R.drawable.ic_mic_off else R.drawable.ic_mic
@@ -176,6 +180,7 @@ class FloatingOrbService : Service() {
         }
 
         root.findViewById<ImageButton>(R.id.overlayClose).setOnClickListener {
+            ClickSound.play(this)
             Log.d(TAG, "close clicked — full exit")
             // Force-stop EVERYTHING Aero: background session, screen share /
             // projection, keep-alive, and tell MainActivity to end any in-app
@@ -195,6 +200,15 @@ class FloatingOrbService : Service() {
         overlayOrb.visibility = View.VISIBLE
         updateOverlayMute()
         updateOverlayScreenToggle()
+        updateOverlayCameraToggle()
+    }
+
+    /** Overlay camera button turns red while the camera window is OFF. */
+    private fun updateOverlayCameraToggle() {
+        AeroUi.applyOverlayButton(
+            root.findViewById<ImageButton>(R.id.overlayCamera),
+            if (cameraOverlay != null) AeroUi.State.NORMAL else AeroUi.State.DANGER
+        )
     }
 
     /** Overlay mute icon turns red while muted. */

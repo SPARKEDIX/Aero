@@ -13,13 +13,23 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
 
 /**
- * Small centered camera window on top of any screen — same CameraX tech as the
- * in-app live camera (PreviewView). Rounded rectangle, front/back flip, close.
+ * Small centered camera window — same CameraX tech as the in-app camera.
+ * Curved rectangular display, front/back flip only (closing is handled by the
+ * orb's camera button). Uses a custom RESUMED lifecycle so preview always starts.
  */
 class OverlayCameraWindow(private val context: Context) {
+
+    private class Owner : LifecycleOwner {
+        val registry = LifecycleRegistry(this)
+        override val lifecycle: Lifecycle get() = registry
+    }
+
+    private val owner = Owner().also { it.registry.currentState = Lifecycle.State.RESUMED }
 
     private val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private var view: View? = null
@@ -32,8 +42,10 @@ class OverlayCameraWindow(private val context: Context) {
         if (shown) return
         val v = LayoutInflater.from(context).inflate(R.layout.overlay_camera_window, null)
         val preview = v.findViewById<PreviewView>(R.id.camPreview)
-        v.findViewById<ImageButton>(R.id.camFlip).setOnClickListener { toggleFlip() }
-        v.findViewById<ImageButton>(R.id.camClose).setOnClickListener { dismiss() }
+        v.findViewById<ImageButton>(R.id.camFlip).setOnClickListener {
+            ClickSound.play(context)
+            toggleFlip()
+        }
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -76,7 +88,7 @@ class OverlayCameraWindow(private val context: Context) {
                     val useCase = Preview.Builder().build().also {
                         it.setSurfaceProvider(preview.surfaceProvider)
                     }
-                    cameraProvider.bindToLifecycle(ProcessLifecycleOwner.get(), selector, useCase)
+                    cameraProvider.bindToLifecycle(owner, selector, useCase)
                 } catch (t: Throwable) {
                     Log.w(TAG, "camera bind failed", t)
                 }
