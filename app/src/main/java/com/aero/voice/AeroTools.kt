@@ -3,6 +3,8 @@ package com.aero.voice
 import android.content.Context
 import android.util.Log
 import org.json.JSONObject
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * Handles memory / reminder / call-me tools. Shared by the in-app session and
@@ -11,6 +13,21 @@ import org.json.JSONObject
 object AeroTools {
 
     private const val TAG = "AeroTools"
+
+    /** Blocking accessibility UI dump (used by look_at_screen). */
+    private fun uiDumpNow(ctx: Context): String {
+        val latch = CountDownLatch(1)
+        val holder = arrayOfNulls<String>(1)
+        AeroAccessibilityService.requestDump { dump ->
+            holder[0] = dump
+            latch.countDown()
+        }
+        return if (latch.await(1200, TimeUnit.MILLISECONDS)) {
+            holder[0]?.take(400) ?: ""
+        } else {
+            ""
+        }
+    }
 
     fun handle(ctx: Context, call: ToolCall): ToolResponse? = when (call.name) {
         "remember_fact" -> {
@@ -182,14 +199,16 @@ object AeroTools {
 
         "look_at_screen" -> {
             val ok = ScreenShareHelper.ensureScreenShare(ctx)
-            ToolResponse(
-                call.id, call.name,
-                JSONObject().put(
-                    "status",
-                    if (ok) "Screen share shuru ho raha hai (system consent dialog aaye to Allow karo)."
-                    else "Screen share start nahi ho paya."
-                )
-            )
+            // Instant accessibility UI dump — lets the model answer "what's on
+            // screen" right now even before the video feed warms up.
+            val dump = uiDumpNow(ctx)
+            val status = if (ok) {
+                "Screen share shuru ho raha hai (system consent dialog aaye to Allow karo). " +
+                    "Screen text abhi: " + dump
+            } else {
+                "Screen share start nahi ho paya. Screen text: " + dump
+            }
+            ToolResponse(call.id, call.name, JSONObject().put("status", status))
         }
 
         "agent_run" -> {

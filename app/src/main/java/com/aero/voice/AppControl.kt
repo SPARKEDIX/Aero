@@ -425,7 +425,8 @@ object AppControl {
 
         // ---- Self screen vision ----
         if (Regex("(?i)\\b(screen dekh|screen dekho|dekh screen|look at screen|screen kya dikh raha|screen dekho)\\b").containsMatchIn(t) ||
-            Regex("(?i)\\b(dekh|dekho)\\b.*\\b(screen|screen par)\\b").containsMatchIn(t)
+            Regex("(?i)\\b(dekh|dekho)\\b.*\\b(screen|screen par)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(ye kya dikh|kya dikh rha|kya dikh raha|abhi kya dikh|ye kya hai|kya hai screen par)\\b").containsMatchIn(t)
         ) {
             return Command.LookScreen
         }
