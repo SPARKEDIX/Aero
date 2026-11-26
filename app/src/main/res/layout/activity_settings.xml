@@ -255,18 +255,6 @@
                 android:textStyle="bold"
                 android:text="⚙️ Developer Mode" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/voiceButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                app:cornerRadius="12dp"
-                app:backgroundTint="@color/orb_purple"
-                android:textColor="@android:color/white"
-                android:textSize="15sp"
-                android:textStyle="bold"
-                android:text="🎙️ Voice Verification" />
-
             <TextView
                 android:id="@+id/settingsStatus"
                 android:layout_width="match_parent"

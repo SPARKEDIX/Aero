@@ -540,14 +540,6 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         return Math.sqrt(sum / n).toFloat()
     }
 
-    private fun toShorts(bytes: ByteArray): ShortArray {
-        val out = ShortArray(bytes.size / 2)
-        for (i in out.indices) {
-            out[i] = ((bytes[i * 2 + 1].toInt() shl 8) or (bytes[i * 2].toInt() and 0xFF)).toShort()
-        }
-        return out
-    }
-
     // ---- GeminiLiveClient.Listener ----
     // All callbacks arrive on OkHttp threads → hop to the main thread for UI work.
 
@@ -596,8 +588,6 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
                 }
 
                 if (!AeroState.micMuted) client?.sendAudio(chunk)
-                // Feed speaker fingerprint sampler (cheap, non-blocking).
-                SpeakerContext.feed(toShorts(chunk))
                 mainChunks++
                 if (mainChunks % 20 == 1) {
                     Log.d(
@@ -610,13 +600,6 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     }
 
     override fun onUserText(text: String) {
-        // Speaker tag (voiceprint) — injected before handling anything so the
-        // model knows who is speaking. Runs locally; zero latency for audio.
-        val tag = SpeakerContext.tag(this)
-        if (tag != null) {
-            client?.sendContextText(tag)
-        }
-
         // Spoken dismiss intents ("tu jaa", "bye", …) close the session + orb.
         if (DismissIntents.matches(text)) {
             Log.d("AeroDismiss", "dismiss intent heard: \"$text\"")
