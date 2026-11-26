@@ -154,6 +154,10 @@ object AppControl {
         data class YoutubeSpeed(val label: String) : Command()
         object LockPhone : Command()
         object UnlockPhone : Command()
+        object AutoReplyOn : Command()
+        object AutoReplyOff : Command()
+        data class AutoReplyAdd(val name: String) : Command()
+        data class AutoReplyRemove(val name: String) : Command()
     }
 
     private val openRe = Regex(
@@ -383,6 +387,28 @@ object AppControl {
             return Command.UnlockPhone
         }
 
+        // ---- WhatsApp auto-reply ----
+        if (Regex("(?i)\\b(auto ?reply|auto reply|autoreply)\\b.*\\b(on|chalu|shuru|enable)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(whatsapp|wa)\\b.*\\b(auto ?reply)\\b.*\\b(on|chalu|shuru)\\b").containsMatchIn(t)
+        ) {
+            return Command.AutoReplyOn
+        }
+        if (Regex("(?i)\\b(auto ?reply|autoreply)\\b.*\\b(off|band|bujhao|disable)\\b").containsMatchIn(t) ||
+            Regex("(?i)\\b(whatsapp|wa)\\b.*\\b(auto ?reply)\\b.*\\b(off|band)\\b").containsMatchIn(t)
+        ) {
+            return Command.AutoReplyOff
+        }
+        val addTarget = Regex("(?i)\\b(auto ?reply|autoreply)\\b.*\\b(kisko|only|sirf|for|ko)\\b(.*)").find(t)
+        if (addTarget != null) {
+            val name = addTarget.groupValues[1].trim()
+            if (name.isNotEmpty()) return Command.AutoReplyAdd(name)
+        }
+        val rmTarget = Regex("(?i)\\b(auto ?reply|autoreply)\\b.*\\b(hatao|remove|band)\\b.*\\b(kisko|only|sirf|for|ko)\\b(.*)").find(t)
+        if (rmTarget != null) {
+            val name = rmTarget.groupValues[1].trim()
+            if (name.isNotEmpty()) return Command.AutoReplyRemove(name)
+        }
+
         // Memory: "yaad rakho mera naam Kartik hai" / "remember that ..."
         val remember = Regex(
             "(?i)\\b(yaad rakho|yaad rakhna|yaad rakh|remember that|remember|note karo|note kar)\\b(.*)"
@@ -603,5 +629,23 @@ object AppControl {
         }
         is Command.LockPhone -> ScreenControl.lock(ctx)
         is Command.UnlockPhone -> ScreenControl.unlock(ctx)
+        is Command.AutoReplyOn -> {
+            WhatsAppAutoReply.setEnabled(ctx, true)
+            val targets = WhatsAppAutoReply.allowlist(ctx)
+            if (targets.isEmpty()) "WhatsApp auto-reply ON (sabke liye)."
+            else "WhatsApp auto-reply ON — sirf: ${targets.joinToString(", ")}."
+        }
+        is Command.AutoReplyOff -> {
+            WhatsAppAutoReply.setEnabled(ctx, false)
+            "WhatsApp auto-reply OFF."
+        }
+        is Command.AutoReplyAdd -> {
+            WhatsAppAutoReply.addTarget(ctx, command.name)
+            "Auto-reply sirf ${command.name} ke liye."
+        }
+        is Command.AutoReplyRemove -> {
+            WhatsAppAutoReply.removeTarget(ctx, command.name)
+            "${command.name} auto-reply se hata diya."
+        }
     }
 }

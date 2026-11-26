@@ -793,6 +793,32 @@ class GeminiLiveClient(
             }))
         })
 
+        arr.put(JSONObject().apply {
+            put("functionDeclarations", JSONArray().put(JSONObject().apply {
+                put("name", "whatsapp_autoreply")
+                put(
+                    "description",
+                    "Control WhatsApp auto-reply: enable/disable, or allow-list one " +
+                        "contact. When enabled, Aero replies on its own to incoming " +
+                        "WhatsApp messages (via AI) while the user is busy."
+                )
+                put("parameters", JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", JSONObject().apply {
+                        put("action", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "on | off | add_target | remove_target")
+                        })
+                        put("name", JSONObject().apply {
+                            put("type", "STRING")
+                            put("description", "Contact name for add_target/remove_target.")
+                        })
+                    })
+                    put("required", JSONArray().put("action"))
+                })
+            }))
+        })
+
         return arr
     }
     fun sendToolResponses(responses: List<ToolResponse>) {

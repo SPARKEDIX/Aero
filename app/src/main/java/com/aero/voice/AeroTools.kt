@@ -148,6 +148,33 @@ object AeroTools {
             ToolResponse(call.id, call.name, JSONObject().put("status", status))
         }
 
+        "whatsapp_autoreply" -> {
+            val action = call.args.optString("action").trim().lowercase()
+            val name = call.args.optString("name").trim()
+            val status = when (action) {
+                "on" -> {
+                    WhatsAppAutoReply.setEnabled(ctx, true)
+                    val targets = WhatsAppAutoReply.allowlist(ctx)
+                    if (targets.isEmpty()) "WhatsApp auto-reply ON (sabke liye)."
+                    else "WhatsApp auto-reply ON — sirf ${targets.joinToString(", ")}."
+                }
+                "off" -> {
+                    WhatsAppAutoReply.setEnabled(ctx, false)
+                    "WhatsApp auto-reply OFF."
+                }
+                "add_target" -> {
+                    WhatsAppAutoReply.addTarget(ctx, name)
+                    "Auto-reply sirf $name ke liye."
+                }
+                "remove_target" -> {
+                    WhatsAppAutoReply.removeTarget(ctx, name)
+                    "$name auto-reply se hata diya."
+                }
+                else -> "Unknown auto-reply action: $action"
+            }
+            ToolResponse(call.id, call.name, JSONObject().put("status", status))
+        }
+
         else -> null
     }
 }

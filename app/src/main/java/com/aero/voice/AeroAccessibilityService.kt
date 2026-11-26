@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
@@ -30,7 +31,25 @@ class AeroAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
         when (event.eventType) {
-            AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED -> captureNotification(event)
+            AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED -> {
+                captureNotification(event)
+                // WhatsApp auto-reply hook
+                try {
+                    val pkg = event.packageName?.toString() ?: ""
+                    if (pkg.contains("whatsapp") && WhatsAppAutoReply.isEnabled(this)) {
+                        val text = event.text?.joinToString(" ")?.trim().orEmpty()
+                        if (text.isNotEmpty() && WhatsAppAutoReply.shouldHandle(this, text)) {
+                            lastWaNotificationAt = System.currentTimeMillis()
+                            handler.postDelayed({
+                                if (System.currentTimeMillis() - lastWaNotificationAt > 2500) {
+                                    WhatsAppAutoReply.handleIncoming(this, text)
+                                }
+                            }, 3000L)
+                        }
+                    }
+                } catch (_: Throwable) {
+                }
+            }
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
                 // After opening Overview, try to find and click "Clear all".
                 while (activeOverviewOpen > 0) {
@@ -187,6 +206,7 @@ class AeroAccessibilityService : AccessibilityService() {
     // ---- Notifications (live capture) ----
 
     private val recentNotifications = ArrayDeque<String>()
+    private var lastWaNotificationAt = 0L
 
     private fun captureNotification(event: AccessibilityEvent) {
         val text = event.text?.joinToString(" ")?.trim().orEmpty()
@@ -261,6 +281,35 @@ class AeroAccessibilityService : AccessibilityService() {
             }
         }
         attempt(timeoutMs)
+    }
+
+    /** Opens WhatsApp, opens the chat with [sender], types [reply], taps Send. */
+    private fun performAutoReply(sender: String, reply: String) {
+        if (sender.isBlank() || reply.isBlank()) return
+        try {
+            val app = AeroApp.instance ?: return
+            val launch = app.packageManager.getLaunchIntentForPackage("com.whatsapp")
+                ?: return
+            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            app.startActivity(launch)
+        } catch (_: Throwable) {
+            return
+        }
+        handler.postDelayed({
+            if (!tryFindAndClick(sender)) {
+                Log.d(TAG, "auto-reply: chat \"$sender\" nahi mila")
+                return@postDelayed
+            }
+            handler.postDelayed({
+                performTypeText(reply)
+                handler.postDelayed({
+                    val ok = tryFindAndClick("send") ||
+                        tryFindAndClick("Send") ||
+                        tryFindAndClick("Send message")
+                    Log.d(TAG, "auto-reply send tapped=$ok")
+                }, 700L)
+            }, 900L)
+        }, 1600L)
     }
 
     companion object {
@@ -383,6 +432,14 @@ class AeroAccessibilityService : AccessibilityService() {
             if (!isEnabled()) return false
             val svc = liveService ?: return false
             svc.handler.post { svc.performClearNotifications() }
+            return true
+        }
+
+        /** Sends a WhatsApp auto-reply (open chat → type → send). */
+        fun requestAutoReply(sender: String, reply: String): Boolean {
+            if (!isEnabled()) return false
+            val svc = liveService ?: return false
+            svc.handler.post { svc.performAutoReply(sender, reply) }
             return true
         }
 
