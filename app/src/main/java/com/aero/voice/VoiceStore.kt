@@ -96,7 +96,8 @@ object VoiceStore {
             val bytes = Base64.decode(s, Base64.DEFAULT)
             val dis = java.io.DataInputStream(java.io.ByteArrayInputStream(bytes))
             val n = dis.readInt()
-            if (n <= 0 || n > 64) return null
+            // Only accept current profile dimensions (old v1 profiles are dropped).
+            if (n != VoiceFingerprint.PROFILE_DIM) return null
             FloatArray(n) { dis.readFloat() }
         } catch (_: Exception) {
             null
