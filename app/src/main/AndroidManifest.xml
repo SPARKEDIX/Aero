@@ -33,6 +33,11 @@
         android:theme="@style/Theme.AeroVoice">
 
         <activity
+            android:name=".VoiceVerificationActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
             android:name=".OnboardingActivity"
             android:exported="true"
             android:screenOrientation="portrait">

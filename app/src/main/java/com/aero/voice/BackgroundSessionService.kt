@@ -95,6 +95,7 @@ class BackgroundSessionService : Service() {
                                 if (!micOpen) return@AudioRecorder
                             }
                             if (!AeroState.micMuted) client?.sendAudio(chunk)
+                            SpeakerContext.feed(toShorts(chunk))
                             player?.flush()
                         }.also { it.start() }
                     }
@@ -104,6 +105,11 @@ class BackgroundSessionService : Service() {
                         Log.d(TAG, "dismiss intent heard: \"$text\"")
                         handler.post { dismiss() }
                         return
+                    }
+                    val tag = SpeakerContext.tag(this@BackgroundSessionService)
+                    if (tag != null) {
+                        Log.d(TAG, "speaker tag: $tag")
+                        client?.sendContextText(tag)
                     }
                     // App-control voice commands ("open whatsapp", "clear recents").
                     val cmd = AppControl.parse(text)
@@ -359,6 +365,7 @@ class BackgroundSessionService : Service() {
                                         }
                                     }
                                     if (!AeroState.micMuted) client?.sendAudio(chunk)
+                                    SpeakerContext.feed(toShorts(chunk))
                                     player?.flush()
                                 }.also { it.start() }
                             }
@@ -489,6 +496,14 @@ class BackgroundSessionService : Service() {
         }
         if (n == 0) return 0f
         return Math.sqrt(sum / n).toFloat()
+    }
+
+    private fun toShorts(bytes: ByteArray): ShortArray {
+        val out = ShortArray(bytes.size / 2)
+        for (i in out.indices) {
+            out[i] = ((bytes[i * 2 + 1].toInt() shl 8) or (bytes[i * 2].toInt() and 0xFF)).toShort()
+        }
+        return out
     }
 
     private fun buildNotification(): Notification {

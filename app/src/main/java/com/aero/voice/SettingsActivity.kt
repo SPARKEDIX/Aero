@@ -149,6 +149,12 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
+        // ---- Voice Verification: speaker identification ----
+
+        findViewById<MaterialButton>(R.id.voiceButton).setOnClickListener {
+            VoiceVerificationActivity.open(this)
+        }
+
         findViewById<TextView>(R.id.backButton).setOnClickListener { finish() }
     }
 
