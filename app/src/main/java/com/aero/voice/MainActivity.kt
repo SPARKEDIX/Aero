@@ -87,6 +87,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
     private var micOpen = true
     private var loudFrames = 0
     private var quietFrames = 0
+    private var aiAudioChunks = 0
 
     // ---- Internet access (background searches + queued tool responses) ----
     private val searchScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -395,6 +396,7 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         sessionActive = true
         AeroState.sessionActive = true
         AeroState.micMuted = false
+        aiAudioChunks = 0
         KeepAliveService.start(this)
         setMicActiveUI(true)
         handler.post(drainRunnable)
@@ -629,6 +631,10 @@ class MainActivity : AppCompatActivity(), GeminiLiveClient.Listener {
         orbView.onAiAudio(level)
         AeroState.aiBoost = 0.55f + 0.45f * level
         player?.enqueue(bytes)
+        aiAudioChunks++
+        if (aiAudioChunks % 10 == 1) {
+            Log.d("AeroPlay", "AI audio chunks received: $aiAudioChunks")
+        }
     }
 
     override fun onTurnComplete() {

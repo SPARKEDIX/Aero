@@ -13,9 +13,11 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
             val now = System.currentTimeMillis()
             ReminderStore.all(context).forEach { r ->
                 when {
+                    // Only (re-)arm reminders that are still in the future.
                     r.atMillis > now -> ReminderScheduler.schedule(context, r)
-                    // Missed while the phone was off: ring now instead of dropping it.
-                    now - r.atMillis < 6 * 60 * 60 * 1000L -> fire(context, r)
+                    // Very recent missed reminder (phone was off) → ring now.
+                    now - r.atMillis in 1..6 * 60 * 60 * 1000L -> fire(context, r)
+                    // Stale/old reminders → drop silently (no ghost calls).
                     else -> ReminderStore.remove(context, r.id)
                 }
             }
